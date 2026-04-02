@@ -1,0 +1,55 @@
+{% extends "base/base.html" %}
+{% block title %}Registrar Pago{% endblock %}
+{% block breadcrumb %}Finanzas / Registrar pago{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Registrar Pago</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="cuota_id" value="{{ request.GET.cuota }}">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Paciente *</label>
+              {{ form.paciente }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Método de pago *</label>
+              {{ form.metodo_pago }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Monto (Bs) *</label>
+              {{ form.monto }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fecha *</label>
+              {{ form.fecha }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">N° Recibo</label>
+              {{ form.numero_recibo }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Concepto *</label>
+              {{ form.concepto }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notas</label>
+              {{ form.notas }}
+            </div>
+            <div class="col-12 d-flex justify-content-end gap-2">
+              <a href="javascript:history.back()" class="btn btn-outline-secondary">Cancelar</a>
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-check-lg me-1"></i>Registrar pago
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

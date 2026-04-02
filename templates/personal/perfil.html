@@ -1,0 +1,389 @@
+{% extends "base/base.html" %}
+{% block title %}Mi perfil{% endblock %}
+{% block breadcrumb %}Mi perfil{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Zona de drag & drop ───────────────────────────────────────────── */
+#drop-zone {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  border: 3px dashed var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative; overflow: hidden;
+  background: var(--bg-surface);
+}
+#drop-zone:hover, #drop-zone.drag-over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+#drop-zone img {
+  width: 100%; height: 100%;
+  object-fit: cover; border-radius: 50%;
+  position: absolute; inset: 0;
+}
+#drop-zone .drop-hint {
+  display: flex; flex-direction: column;
+  align-items: center; gap: .4rem;
+  font-size: .78rem; color: var(--text-2);
+  text-align: center; padding: .5rem; z-index: 1;
+  pointer-events: none;
+}
+#drop-zone .drop-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s; z-index: 2;
+}
+#drop-zone:hover .drop-overlay { opacity: 1; }
+#drop-zone .drop-overlay span {
+  color: #fff; font-size: .75rem; font-weight: 600; text-align: center;
+}
+
+/* ── Secciones de formulario ────────────────────────────────────────── */
+.perfil-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+}
+.perfil-section-title {
+  font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-3); margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.badge-rol {
+  display: inline-block;
+  padding: .25em .7em; border-radius: 20px;
+  font-size: .72rem; font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% load static %}
+
+<!-- Encabezado -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.25rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(45,184,122,.35)">
+    <i class="fa-solid fa-circle-user"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">Mi perfil</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">Gestiona tu información personal y contraseña</div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Columna foto ── -->
+  <div class="col-12 col-md-4 col-lg-3">
+
+    <!-- Tarjeta identidad -->
+    <div class="card mb-3">
+      <div class="card-body text-center py-4">
+        <form method="post" enctype="multipart/form-data" id="fotoForm">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="foto">
+          <input type="file" id="fotoInput" name="foto" accept="image/*" style="display:none">
+          <div id="drop-zone" title="Arrastra o toca para cambiar foto">
+            {% if perfil.foto %}
+            <img id="preview" src="{{ perfil.foto.url }}" alt="Foto de perfil">
+            <div class="drop-overlay">
+              <span><i class="fa-solid fa-camera d-block mb-1"></i>Cambiar</span>
+            </div>
+            {% else %}
+            <div class="drop-hint" id="dropHint">
+              <i class="fa-solid fa-camera fa-2x" style="color:var(--accent);opacity:.6"></i>
+              <span>Toca para<br>subir foto</span>
+            </div>
+            {% endif %}
+          </div>
+        </form>
+
+        <div class="mt-3">
+          <div class="fw-bold" style="font-size:1rem">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="badge-rol mt-1">{{ perfil.get_rol_display }}</div>
+          {% if perfil.especialidad %}
+          <div class="mt-1" style="font-size:.78rem;color:var(--text-2)">
+            <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ec4899"></i>{{ perfil.especialidad }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-3 d-flex align-items-center justify-content-center gap-2">
+          <div style="width:16px;height:16px;border-radius:50%;background:{{ perfil.color_agenda }};flex-shrink:0;
+                      box-shadow:0 0 0 3px color-mix(in srgb,{{ perfil.color_agenda }} 30%,transparent)"></div>
+          <span style="font-size:.75rem;color:var(--text-2)">Color en agenda</span>
+        </div>
+
+        <!-- Info rápida -->
+        <div class="mt-3 pt-3" style="border-top:1px solid var(--border-light)">
+          <div class="d-flex align-items-center justify-content-between py-1" style="font-size:.8rem">
+            <span style="color:var(--text-3)"><i class="fa-solid fa-at fa-xs me-1"></i>Usuario</span>
+            <span style="color:var(--text-1);font-weight:500">{{ request.user.username }}</span>
+          </div>
+          <div class="d-flex align-items-center justify-content-between py-1" style="font-size:.8rem">
+            <span style="color:var(--text-3)"><i class="fa-solid fa-calendar fa-xs me-1"></i>Miembro desde</span>
+            <span style="color:var(--text-1)">{{ request.user.date_joined|date:"d/m/Y" }}</span>
+          </div>
+          {% if request.user.last_login %}
+          <div class="d-flex align-items-center justify-content-between py-1" style="font-size:.8rem">
+            <span style="color:var(--text-3)"><i class="fa-solid fa-clock fa-xs me-1"></i>Último acceso</span>
+            <span style="color:var(--text-1)">{{ request.user.last_login|timesince }} atrás</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col foto -->
+
+  <!-- ── Columna formularios ── -->
+  <div class="col-12 col-md-8 col-lg-9">
+
+    <!-- Información personal -->
+    <div class="perfil-section">
+      <div class="perfil-section-title">
+        <i class="fa-solid fa-user fa-fw" style="color:var(--accent)"></i>
+        <span>Información personal</span>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="info">
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.first_name.label }} <span class="text-danger">*</span></label>
+            {{ info_form.first_name }}
+            {% if info_form.first_name.errors %}
+            <div class="text-danger mt-1" style="font-size:.76rem">{{ info_form.first_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.last_name.label }} <span class="text-danger">*</span></label>
+            {{ info_form.last_name }}
+            {% if info_form.last_name.errors %}
+            <div class="text-danger mt-1" style="font-size:.76rem">{{ info_form.last_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.email.label }}</label>
+            {{ info_form.email }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.telefono.label }}</label>
+            {{ info_form.telefono }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.especialidad.label }}</label>
+            {{ info_form.especialidad }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ info_form.color_agenda.label }}</label>
+            <div class="d-flex gap-2 align-items-center">
+              {{ info_form.color_agenda }}
+              <span style="font-size:.78rem;color:var(--text-2)">Color que representa al doctor en el calendario</span>
+            </div>
+          </div>
+
+          {% if info_form.non_field_errors %}
+          <div class="col-12">
+            <div class="alert alert-danger py-2" style="font-size:.83rem">
+              {% for e in info_form.non_field_errors %}{{ e }}{% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm px-4">
+              <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Cambio de contraseña -->
+    <div class="perfil-section {% if accion_error == 'password' %}border-danger{% endif %}">
+      <div class="perfil-section-title">
+        <i class="fa-solid fa-lock fa-fw" style="color:#f59e0b"></i>
+        Cambiar contraseña
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="password">
+
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" style="font-size:.83rem">{{ password_form.password_actual.label }} <span class="text-danger">*</span></label>
+            {{ password_form.password_actual }}
+            {% if password_form.password_actual.errors %}
+            <div class="text-danger mt-1" style="font-size:.76rem">{{ password_form.password_actual.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ password_form.nueva_password.label }} <span class="text-danger">*</span></label>
+            {{ password_form.nueva_password }}
+            {% if password_form.nueva_password.errors %}
+            <div class="text-danger mt-1" style="font-size:.76rem">{{ password_form.nueva_password.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" style="font-size:.83rem">{{ password_form.confirmar_password.label }} <span class="text-danger">*</span></label>
+            {{ password_form.confirmar_password }}
+            {% if password_form.confirmar_password.errors %}
+            <div class="text-danger mt-1" style="font-size:.76rem">{{ password_form.confirmar_password.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Indicador de seguridad -->
+          <div class="col-12">
+            <div id="password-strength" style="display:none">
+              <div style="font-size:.72rem;color:var(--text-2);margin-bottom:.25rem">Seguridad:</div>
+              <div style="height:5px;border-radius:4px;background:var(--border);overflow:hidden">
+                <div id="strength-bar" style="height:100%;width:0;transition:width .3s,background .3s;border-radius:4px"></div>
+              </div>
+              <div id="strength-label" style="font-size:.72rem;margin-top:.2rem"></div>
+            </div>
+          </div>
+
+          {% if password_form.non_field_errors %}
+          <div class="col-12">
+            <div class="alert alert-danger py-2" style="font-size:.83rem">
+              {% for e in password_form.non_field_errors %}{{ e }}{% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-warning btn-sm px-4">
+              <i class="fa-solid fa-key me-1"></i>Cambiar contraseña
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+
+  </div><!-- /col formularios -->
+
+</div><!-- /row -->
+
+<script>
+/* ── Drag & Drop foto ───────────────────────────────────────────────── */
+(function () {
+  const zone     = document.getElementById('drop-zone');
+  const input    = document.getElementById('fotoInput');
+  const form     = document.getElementById('fotoForm');
+  const hint     = document.getElementById('dropHint');
+
+  function mostrarPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      // Crear o actualizar <img>
+      let img = document.getElementById('preview');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'preview';
+        zone.appendChild(img);
+
+        // Overlay de "Cambiar foto"
+        if (!zone.querySelector('.drop-overlay')) {
+          const ov = document.createElement('div');
+          ov.className = 'drop-overlay';
+          ov.innerHTML = '<span><i class="fa-solid fa-camera d-block mb-1"></i>Cambiar foto</span>';
+          zone.appendChild(ov);
+        }
+        if (hint) hint.style.display = 'none';
+      }
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Click en la zona → abrir selector
+  zone.addEventListener('click', () => input.click());
+
+  // Archivo seleccionado con selector
+  input.addEventListener('change', function () {
+    if (this.files.length) {
+      mostrarPreview(this.files[0]);
+      form.submit();
+    }
+  });
+
+  // Eventos de arrastre
+  zone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function () {
+    zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      // Inyectar el archivo en el input y enviar el form
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      mostrarPreview(file);
+      form.submit();
+    }
+  });
+})();
+
+/* ── Indicador de seguridad de contraseña ─────────────────────────── */
+(function () {
+  const inp    = document.querySelector('input[name="nueva_password"]');
+  const wrap   = document.getElementById('password-strength');
+  const bar    = document.getElementById('strength-bar');
+  const label  = document.getElementById('strength-label');
+  if (!inp) return;
+
+  inp.addEventListener('input', function () {
+    const v = this.value;
+    if (!v) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+
+    let score = 0;
+    if (v.length >= 8)  score++;
+    if (v.length >= 12) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+
+    const levels = [
+      { pct: '20%', color: '#f87171', text: 'Muy débil' },
+      { pct: '40%', color: '#f59e0b', text: 'Débil' },
+      { pct: '60%', color: '#fbbf24', text: 'Regular' },
+      { pct: '80%', color: '#34d399', text: 'Fuerte' },
+      { pct: '100%',color: '#10b981', text: 'Muy fuerte' },
+    ];
+    const lvl = levels[Math.min(score, 4)];
+    bar.style.width      = lvl.pct;
+    bar.style.background = lvl.color;
+    label.textContent    = lvl.text;
+    label.style.color    = lvl.color;
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends "base/base.html" %}
+{% block title %}Reportes Financieros{% endblock %}
+{% block breadcrumb %}Finanzas / Reportes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">Reportes Financieros</h4>
+  <a href="{% url 'facturacion:pago' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus me-1"></i>Registrar pago
+  </a>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon success"><i class="bi bi-cash-stack"></i></div>
+      <div>
+        <div class="stat-value">Bs {{ total_mes|floatformat:0 }}</div>
+        <div class="stat-label">Ingresos del mes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-exclamation-circle"></i></div>
+      <div>
+        <div class="stat-value">Bs {{ total_deudas|floatformat:0 }}</div>
+        <div class="stat-label">Deudas pendientes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon warning"><i class="bi bi-receipt"></i></div>
+      <div>
+        <div class="stat-value">{{ pagos_mes.count }}</div>
+        <div class="stat-label">Pagos este mes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ deudas.count }}</div>
+        <div class="stat-label">Cuotas vencidas/pend.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Gráfica ingresos 6 meses -->
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Ingresos últimos 6 meses</div>
+      <div class="card-body">
+        <canvas id="chartIngresos" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Por método de pago -->
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Por método de pago</div>
+      <div class="card-body">
+        <canvas id="chartMetodos" height="180"></canvas>
+        <div class="mt-3">
+          {% for m in por_metodo %}
+          <div class="d-flex justify-content-between py-1 border-bottom" style="border-color:var(--border)!important;font-size:.82rem">
+            <span>{{ m.metodo_pago__nombre }}</span>
+            <span class="fw-600">Bs {{ m.total|floatformat:2 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deudas pendientes -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Cuotas pendientes / vencidas</span>
+    <span style="font-size:.82rem;color:var(--text-2)">Total: Bs {{ total_deudas|floatformat:2 }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 table-mobile">
+        <thead>
+          <tr><th>Paciente</th><th>Tratamiento</th><th>Cuota</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for c in deudas|slice:":20" %}
+          <tr>
+            <td data-label="Paciente">
+              <a href="{% url 'pacientes:detalle' c.tratamiento.paciente.pk %}" class="text-decoration-none text-reset" style="font-size:.875rem;font-weight:500">
+                {{ c.tratamiento.paciente }}
+              </a>
+            </td>
+            <td data-label="Tratamiento" style="font-size:.82rem;color:var(--text-2)">{{ c.tratamiento.servicio.nombre }}</td>
+            <td data-label="Cuota" style="font-family:'Space Mono',monospace;font-size:.8rem">{{ c.numero_cuota }}</td>
+            <td data-label="Monto" style="font-weight:600">Bs {{ c.monto }}</td>
+            <td data-label="Vencimiento">
+              <span style="font-size:.82rem;{% if c.esta_vencida %}color:var(--danger);font-weight:600{% endif %}">
+                {{ c.fecha_vencimiento|date:"d/m/Y" }}
+                {% if c.esta_vencida %}<i class="bi bi-clock-history ms-1"></i>{% endif %}
+              </span>
+            </td>
+            <td data-label="Estado"><span class="badge-estado estado-{{ c.estado }}">{{ c.get_estado_display }}</span></td>
+            <td data-label="Acción">
+              <a href="{% url 'facturacion:pago_paciente' c.tratamiento.paciente.pk %}?cuota={{ c.pk }}"
+                 class="btn btn-sm btn-outline-secondary">Pagar</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr class="table-empty-row"><td colspan="7" class="text-center text-secondary py-4">Sin deudas pendientes</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Historial de pagos del mes -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-list-check me-2"></i>Pagos del mes</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 table-mobile">
+        <thead>
+          <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th class="text-end">Monto</th></tr>
+        </thead>
+        <tbody>
+          {% for p in pagos_mes %}
+          <tr>
+            <td data-label="Fecha" style="font-family:'Space Mono',monospace;font-size:.8rem">{{ p.fecha|date:"d/m" }}</td>
+            <td data-label="Paciente" style="font-size:.875rem">{{ p.paciente }}</td>
+            <td data-label="Concepto" style="font-size:.82rem;color:var(--text-2)">{{ p.concepto }}</td>
+            <td data-label="Método" style="font-size:.82rem">{{ p.metodo_pago }}</td>
+            <td data-label="Monto" style="font-weight:600;color:var(--success)">Bs {{ p.monto }}</td>
+          </tr>
+          {% empty %}
+          <tr class="table-empty-row"><td colspan="5" class="text-center text-secondary py-4">Sin pagos registrados este mes</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const mesesData = {{ meses_data|safe }};
+Chart.defaults.color = '#8b90a0';
+Chart.defaults.borderColor = '#2a2f3d';
+
+// Ingresos
+new Chart(document.getElementById('chartIngresos'), {
+  type: 'bar',
+  data: {
+    labels: mesesData.map(m => m.mes),
+    datasets: [{
+      label: 'Ingresos (Bs)',
+      data: mesesData.map(m => m.total),
+      backgroundColor: 'rgba(78,159,245,.3)',
+      borderColor: '#4e9ff5',
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: '#2a2f3d' }, ticks: { callback: v => 'Bs ' + v } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Métodos pago
+const metodos = [{% for m in por_metodo %}'{{ m.metodo_pago__nombre }}',{% endfor %}];
+const totales = [{% for m in por_metodo %}{{ m.total }},{% endfor %}];
+const COLORS = ['#4e9ff5','#34d399','#fbbf24','#a78bfa','#f87171','#22d3ee'];
+
+if (metodos.length > 0) {
+  new Chart(document.getElementById('chartMetodos'), {
+    type: 'doughnut',
+    data: {
+      labels: metodos,
+      datasets: [{
+        data: totales,
+        backgroundColor: COLORS.slice(0, metodos.length),
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } }
+      },
+      cutout: '65%',
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,474 @@
+{% extends "base/base.html" %}
+{% block title %}Calendario{% endblock %}
+{% block breadcrumb %}Agenda / Calendario{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --fc-border-color: var(--border);
+  --fc-button-bg-color: var(--bg-hover);
+  --fc-button-border-color: var(--border);
+  --fc-button-text-color: var(--text-1);
+  --fc-button-hover-bg-color: var(--accent-dim);
+  --fc-button-hover-border-color: var(--border);
+  --fc-button-active-bg-color: var(--accent);
+  --fc-button-active-border-color: var(--accent);
+  --fc-today-bg-color: rgba(45,184,122,.07);
+  --fc-now-indicator-color: #2db87a;
+  --fc-event-border-color: transparent;
+  --fc-page-bg-color: var(--bg-card);
+  --fc-neutral-bg-color: var(--bg-hover);
+  --fc-list-event-hover-bg-color: var(--bg-hover);
+  --fc-highlight-color: rgba(45,184,122,.12);
+}
+.fc { color: var(--text-1) !important; }
+.fc-col-header-cell { background: var(--bg-surface); }
+.fc-scrollgrid { border-color: var(--border) !important; }
+.fc-event {
+  border-radius: 6px !important;
+  font-size: .78rem !important;
+  padding: 2px 5px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+}
+.fc-toolbar-title { font-size: 1rem !important; font-weight: 600; }
+.fc-button { font-size: .82rem !important; padding: .3rem .65rem !important; border-radius: 7px !important; }
+.fc-timegrid-slot { cursor: pointer; }
+.fc-timegrid-slot:hover { background: rgba(45,184,122,.04); }
+.fc-list-day-cushion { background: var(--bg-surface) !important; }
+.fc-list-event-title a { color: var(--text-1) !important; text-decoration: none; }
+.fc-list-empty { background: var(--bg-card); color: var(--text-2); }
+#calendario-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1rem;
+}
+.hint-crear {
+  font-size: .72rem;
+  color: var(--text-3);
+  padding: .25rem .55rem;
+  background: var(--bg-surface);
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+}
+/* Mobile */
+@media (max-width: 576px) {
+  .fc-button { padding: .25rem .45rem !important; font-size: .75rem !important; }
+  .fc-toolbar-title { font-size: .88rem !important; }
+  #calendario-wrap { padding: .5rem; }
+  .fc-toolbar { gap: .25rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">Calendario de citas</h4>
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <select id="filtroDoctor" class="form-select form-select-sm" style="min-width:160px">
+      <option value="">Todos los doctores</option>
+      {% for d in doctores %}
+      <option value="{{ d.pk }}" data-color="{{ d.perfil.color_agenda }}">
+        {{ d.get_full_name|default:d.username }}
+      </option>
+      {% endfor %}
+    </select>
+    <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus me-1"></i>Nueva cita
+    </a>
+  </div>
+</div>
+
+<!-- Leyenda doctores -->
+<div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+  {% for d in doctores %}
+  <span class="leyenda-doctor" data-id="{{ d.pk }}"
+        style="background:{{ d.perfil.color_agenda }}22;color:{{ d.perfil.color_agenda }};
+               border:1.5px solid {{ d.perfil.color_agenda }}55;
+               padding:.28em .75em;border-radius:20px;font-size:.74rem;font-weight:600;
+               cursor:pointer;transition:all .15s">
+    <span style="display:inline-block;width:9px;height:9px;background:{{ d.perfil.color_agenda }};
+                 border-radius:50%;margin-right:.35em;vertical-align:middle"></span>
+    Dr. {{ d.get_full_name|default:d.username }}
+  </span>
+  {% empty %}
+  <span style="font-size:.78rem;color:var(--text-3)">Sin doctores registrados</span>
+  {% endfor %}
+  <span class="hint-crear ms-auto d-none d-md-inline">
+    <i class="fa-solid fa-hand-pointer me-1"></i>Haz clic en una hora libre para crear una cita
+  </span>
+</div>
+<!-- Leyenda estados (secundaria) -->
+<div class="d-flex flex-wrap gap-1 mb-3 align-items-center">
+  <span style="font-size:.68rem;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem">Estado:</span>
+  {% for estado, label, color in estados_colores %}
+  <span style="background:{{ color }}18;color:{{ color }};padding:.15em .55em;border-radius:4px;font-size:.68rem;font-weight:600;border:1px solid {{ color }}33">
+    {{ label }}
+  </span>
+  {% endfor %}
+</div>
+
+<div id="calendario-wrap">
+  <div id="calendar"></div>
+</div>
+
+<!-- Modal detalle cita -->
+<div class="modal fade" id="modalCita" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+      <div class="modal-header" style="border-color:var(--border);padding:.75rem 1rem">
+        <div>
+          <h6 class="modal-title fw-bold mb-0" id="modalCitaTitulo">Detalle de cita</h6>
+          <div id="modalCitaSubtitulo" style="font-size:.75rem;color:var(--text-2)"></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalCitaBody" style="font-size:.85rem;padding:.85rem 1rem"></div>
+      <div class="modal-footer" style="border-color:var(--border);gap:.4rem;flex-wrap:wrap">
+        <a id="btnCobrarCita"  href="#" class="btn btn-success btn-sm">
+          <i class="fa-solid fa-money-bill-wave me-1"></i>Cobrar
+        </a>
+        <a id="btnVerTicket"   href="#" class="btn btn-sm" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40" target="_blank">
+          <i class="fa-solid fa-receipt me-1"></i>Ver ticket
+        </a>
+        <a id="btnEditarCita"  href="#" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-pencil me-1"></i>Editar
+        </a>
+        <a id="btnVerPaciente" href="#" class="btn btn-outline-secondary btn-sm">
+          <i class="fa-solid fa-user me-1"></i>Paciente
+        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const calEl        = document.getElementById('calendar');
+  const filtroDoctor = document.getElementById('filtroDoctor');
+  const isMobile     = window.innerWidth < 768;
+
+  /* ── Locale español definido manualmente (sin depender de archivos externos) */
+  const esLocale = {
+    code: 'es',
+    week: { dow: 1, doy: 4 },   // semana inicia lunes
+    buttonText: {
+      prev:  'Anterior',
+      next:  'Siguiente',
+      today: 'Hoy',
+      year:  'Año',
+      month: 'Mes',
+      week:  'Semana',
+      day:   'Día',
+      list:  'Lista',
+    },
+    buttonHints: {
+      prev:  '$0 anterior',
+      next:  '$0 siguiente',
+      today: '$0 actual',
+    },
+    viewHint:     'Vista $0',
+    navLinkHint:  'Ir al $0',
+    moreLinkText: function(n) { return '+' + n + ' más'; },
+    noEventsText: 'No hay eventos que mostrar',
+    allDayText:   'Todo el día',
+    weekText:     'Sm',
+    closeHint:    'Cerrar',
+    timeHint:     'Hora',
+    eventHint:    'Evento',
+  };
+
+  /* Extrae fecha "YYYY-MM-DD" y hora "HH:MM" de una cadena ISO de FullCalendar.
+     Funciona tanto con offset (-04:00) como sin él. */
+  function parseFCStr(str) {
+    const base = str.slice(0, 16);           // "2024-01-15T10:00"
+    return { fecha: base.slice(0, 10), hora: base.slice(11, 16) };
+  }
+
+  /* Suma minutos a una hora "HH:MM" y devuelve "HH:MM" */
+  function addMinutes(hora, mins) {
+    const [h, m] = hora.split(':').map(Number);
+    const d = new Date(2000, 0, 1, h, m + mins);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  const CSRF = '{{ csrf_token }}';
+
+  const calendar = new FullCalendar.Calendar(calEl, {
+    locales:     [esLocale],
+    locale:      'es',
+    timeZone:    'America/La_Paz',
+    initialView: isMobile ? 'listWeek' : 'timeGridWeek',
+
+    /* Barra de herramientas */
+    headerToolbar: isMobile
+      ? { left: 'prev,next', center: 'title', right: 'today' }
+      : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+    footerToolbar: isMobile
+      ? { center: 'dayGridMonth,timeGridDay,listWeek' }
+      : false,
+    buttonText: { listWeek: 'Lista' },
+
+    /* Horario y apariencia */
+    slotMinTime:   '06:30:00',
+    slotMaxTime:   '24:30:00',
+    slotDuration:  '00:30:00',
+    allDaySlot:    false,
+    nowIndicator:  true,
+    height:        isMobile ? 'auto' : 660,
+    expandRows:    true,
+
+    /* Interactividad */
+    selectable: true,
+    editable:   true,
+    droppable:  true,
+    eventResizableFromStart: false,
+
+    eventSources: [{
+      url: '{% url "agenda:citas_json" %}',
+      extraParams: function () {
+        return { doctor: filtroDoctor.value };
+      }
+    }],
+
+    /* ── Color y opacidad según estado ──────────────────────────────────── */
+    eventDidMount: function (info) {
+      if (info.event.extendedProps.opaco) {
+        info.el.style.opacity = '0.45';
+        info.el.style.filter  = 'saturate(0.4)';
+      }
+      // Tooltip con doctor y estado
+      const ep = info.event.extendedProps;
+      info.el.title = `${ep.paciente}\nDr. ${ep.doctor || '—'}\n${ep.estado_display}`;
+    },
+
+    /* ── Clic en hora vacía → abrir formulario nueva cita ────────────────── */
+    dateClick: function (info) {
+      const hasTime  = info.dateStr.length > 10;
+      const fecha    = info.dateStr.slice(0, 10);
+      const doctor   = filtroDoctor.value;
+      let url = `{% url 'agenda:crear_cita' %}?fecha=${fecha}`;
+      if (hasTime) {
+        const hi = info.dateStr.slice(11, 16);
+        const hf = addMinutes(hi, 30);
+        url += `&hora_inicio=${hi}&hora_fin=${hf}`;
+      }
+      if (doctor) url += `&doctor=${doctor}`;
+      window.location.href = url;
+    },
+
+    /* ── Clic en evento → modal con detalle ──────────────────────────────── */
+    eventClick: function (info) {
+      const p      = info.event.extendedProps;
+      const citaId = info.event.id;
+      const hi     = parseFCStr(info.event.startStr).hora;
+      const hf     = info.event.endStr ? parseFCStr(info.event.endStr).hora : hi;
+      const fec    = parseFCStr(info.event.startStr).fecha;
+
+      const ESTADO_COLOR = {
+        programada: '#a78bfa', confirmada: '#4e9ff5', en_curso: '#f59e0b',
+        completada: '#22c55e', cancelada:  '#f87171', no_asistio: '#f59e0b',
+      };
+      const ESTADOS_LABEL = {
+        programada: 'Programada', confirmada: 'Confirmada', en_curso: 'En curso',
+        completada: 'Completada', cancelada: 'Cancelada', no_asistio: 'No asistió',
+      };
+
+      /* Cabecera */
+      document.getElementById('modalCitaTitulo').textContent = p.paciente;
+      document.getElementById('modalCitaSubtitulo').textContent = `${fec}  ${hi} – ${hf}`;
+
+      /* Cuerpo */
+      const estadoColor = ESTADO_COLOR[p.estado] || '#6b7280';
+      let html = `
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Doctor</div>
+            <div style="font-size:.85rem">
+              <span style="display:inline-block;width:9px;height:9px;background:${p.doctor_color};border-radius:50%;margin-right:.3em"></span>
+              ${p.doctor || '—'}
+            </div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Estado</div>
+            <span style="background:${estadoColor}20;color:${estadoColor};border:1px solid ${estadoColor}40;
+                         padding:.18em .6em;border-radius:20px;font-size:.72rem;font-weight:700">
+              ${p.completada ? '✓ ' : ''}${p.estado_display}
+            </span>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Servicio</div>
+            <div style="font-size:.83rem">${p.servicio || '—'}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Sillón</div>
+            <div style="font-size:.83rem">${p.sillon || '—'}</div>
+          </div>
+          ${p.motivo ? `
+          <div class="col-12">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Motivo</div>
+            <div style="font-size:.83rem">${p.motivo}</div>
+          </div>` : ''}
+          ${p.notas ? `
+          <div class="col-12">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Notas</div>
+            <div style="font-size:.78rem;color:var(--text-2)">${p.notas}</div>
+          </div>` : ''}
+          ${p.tratamiento_id ? `
+          <div class="col-12">
+            <div style="background:${p.tratamiento_cat_color || '#6b7280'}15;border:1px solid ${p.tratamiento_cat_color || '#6b7280'}30;border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem">
+              <i class="fa-solid fa-tooth" style="color:${p.tratamiento_cat_color || '#6b7280'}"></i>
+              <div style="font-size:.78rem;flex-grow:1">
+                <span style="color:var(--text-3);font-size:.68rem">Tratamiento vinculado</span><br>
+                <strong style="color:var(--text-1)">${p.tratamiento_nombre}</strong>
+              </div>
+              <a href="/clinico/paciente/${p.paciente_id}/tratamientos/" class="btn btn-sm"
+                 style="font-size:.7rem;padding:.2em .6em;background:${p.tratamiento_cat_color || '#6b7280'}20;color:${p.tratamiento_cat_color || '#6b7280'};border:1px solid ${p.tratamiento_cat_color || '#6b7280'}40">
+                Ver plan
+              </a>
+            </div>
+          </div>` : ''}
+          ${p.completada && p.ticket_numero ? `
+          <div class="col-12">
+            <div style="background:#22c55e15;border:1px solid #22c55e30;border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem">
+              <i class="fa-solid fa-receipt" style="color:#22c55e"></i>
+              <span style="font-size:.8rem;color:var(--text-1)">Cobrado — Ticket <strong>${p.ticket_numero}</strong></span>
+            </div>
+          </div>` : ''}
+        </div>`;
+
+      /* Cambio de estado (solo si NO está completada) */
+      if (!p.completada) {
+        const opciones = Object.entries(ESTADOS_LABEL)
+          .filter(([k]) => k !== p.estado && k !== 'completada')
+          .map(([k, v]) => {
+            const c = ESTADO_COLOR[k];
+            return `<button type="button" class="btn btn-sm"
+                      style="background:${c}18;color:${c};border:1px solid ${c}33;font-size:.72rem"
+                      onclick="cambiarEstado('${citaId}','${k}')">
+                      ${v}
+                    </button>`;
+          }).join('');
+        html += `
+          <div style="border-top:1px solid var(--border);padding-top:.75rem">
+            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.5rem">
+              Cambiar estado
+            </div>
+            <div class="d-flex flex-wrap gap-1">${opciones}</div>
+          </div>`;
+      }
+
+      document.getElementById('modalCitaBody').innerHTML = html;
+
+      /* Botones del footer */
+      const btnCobrar    = document.getElementById('btnCobrarCita');
+      const btnTicket    = document.getElementById('btnVerTicket');
+      const btnEditar    = document.getElementById('btnEditarCita');
+      const btnPaciente  = document.getElementById('btnVerPaciente');
+
+      btnPaciente.href = `/pacientes/${p.paciente_id}/`;
+
+      if (p.completada) {
+        btnCobrar.style.display  = 'none';
+        btnEditar.style.display  = 'none';
+        btnTicket.style.display  = p.ticket_pk ? '' : 'none';
+        if (p.ticket_pk) btnTicket.href = `/facturacion/ticket/${p.ticket_pk}/`;
+      } else {
+        btnCobrar.style.display  = '';
+        btnEditar.style.display  = '';
+        btnTicket.style.display  = 'none';
+        btnCobrar.href           = `/facturacion/ticket/nuevo/${citaId}/`;
+        btnEditar.href           = `/agenda/citas/${citaId}/editar/`;
+      }
+
+      new bootstrap.Modal(document.getElementById('modalCita')).show();
+    },
+
+    /* ── Arrastrar evento → reprogramar cita ─────────────────────────────── */
+    eventDrop: async function (info) {
+      const { fecha, hora: hi } = parseFCStr(info.event.startStr);
+      const hf = info.event.endStr ? parseFCStr(info.event.endStr).hora : addMinutes(hi, 30);
+      const resp = await fetch(`/agenda/citas/${info.event.id}/mover/`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ fecha, hora_inicio: hi, hora_fin: hf })
+      });
+      if (!resp.ok) info.revert();
+    },
+
+    /* ── Redimensionar evento → ajustar hora fin ──────────────────────────── */
+    eventResize: async function (info) {
+      const { fecha, hora: hi } = parseFCStr(info.event.startStr);
+      const hf = info.event.endStr ? parseFCStr(info.event.endStr).hora : hi;
+      const resp = await fetch(`/agenda/citas/${info.event.id}/mover/`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ fecha, hora_inicio: hi, hora_fin: hf })
+      });
+      if (!resp.ok) info.revert();
+    },
+
+    /* ── Cambio de tamaño de ventana → vista responsive ─────────────────── */
+    windowResize: function () {
+      const nowMobile = window.innerWidth < 768;
+      const view = calendar.view.type;
+      if (nowMobile && view === 'timeGridWeek') {
+        calendar.changeView('listWeek');
+      } else if (!nowMobile && view === 'listWeek') {
+        calendar.changeView('timeGridWeek');
+      }
+    },
+  });
+
+  calendar.render();
+
+  /* ── Cambiar estado de la cita desde el modal ────────────────────── */
+  window.cambiarEstado = async function (citaId, nuevoEstado) {
+    const resp = await fetch(`/agenda/citas/${citaId}/estado/`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({ estado: nuevoEstado }),
+    });
+    if (resp.ok) {
+      bootstrap.Modal.getInstance(document.getElementById('modalCita')).hide();
+      calendar.refetchEvents();
+    }
+  };
+
+  filtroDoctor.addEventListener('change', () => {
+    calendar.refetchEvents();
+    actualizarLeyendaSeleccion();
+  });
+
+  /* ── Click en badge de doctor → filtrar + resaltar ── */
+  document.querySelectorAll('.leyenda-doctor').forEach(function (badge) {
+    badge.addEventListener('click', function () {
+      const id = this.dataset.id;
+      const actual = filtroDoctor.value;
+      // toggle: si ya estaba filtrado por este, quitar filtro
+      filtroDoctor.value = (actual === id) ? '' : id;
+      calendar.refetchEvents();
+      actualizarLeyendaSeleccion();
+    });
+  });
+
+  function actualizarLeyendaSeleccion() {
+    const selId = filtroDoctor.value;
+    document.querySelectorAll('.leyenda-doctor').forEach(function (b) {
+      if (!selId || b.dataset.id === selId) {
+        b.style.opacity = '1';
+        b.style.fontWeight = '700';
+      } else {
+        b.style.opacity = '0.35';
+        b.style.fontWeight = '600';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'agenda:calendario' %}" class="text-decoration-none text-secondary">Agenda</a> /
+  <a href="{% url 'agenda:detalle_cita' cita.pk %}" class="text-decoration-none text-secondary">Cita</a> /
+  Cobrar
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- ── Columna izquierda: info paciente + servicio + historial ── -->
+  <div class="col-12 col-md-5">
+
+    <!-- Paciente -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="fa-solid fa-user fa-fw me-2"></i>Paciente
+      </div>
+      <div class="card-body">
+        <div class="fw-bold fs-6 mb-1">{{ paciente }}</div>
+        {% if paciente.telefono %}
+        <div class="text-secondary mb-2" style="font-size:.82rem">
+          <i class="fa-solid fa-phone fa-fw me-1"></i>{{ paciente.telefono }}
+        </div>
+        {% endif %}
+
+        <!-- Saldo / deuda -->
+        {% if deuda > 0 %}
+        <div class="rounded p-2 d-flex align-items-center gap-2"
+             style="background:#f8712220;border:1px solid #f87171">
+          <i class="fa-solid fa-triangle-exclamation" style="color:#f87171"></i>
+          <div>
+            <div style="font-size:.72rem;color:#f87171;font-weight:700;text-transform:uppercase">
+              Deuda pendiente
+            </div>
+            <div class="fw-bold" style="color:#f87171">Bs {{ deuda }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="rounded p-2 d-flex align-items-center gap-2"
+             style="background:#34d39920;border:1px solid #34d399">
+          <i class="fa-solid fa-circle-check" style="color:#34d399"></i>
+          <div>
+            <div style="font-size:.72rem;color:#34d399;font-weight:700;text-transform:uppercase">
+              Sin deuda
+            </div>
+            <div style="font-size:.82rem;color:var(--text-2)">Al día en pagos</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Servicio de la cita -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="fa-solid fa-tooth fa-fw me-2"></i>Servicio de la cita
+      </div>
+      <div class="card-body">
+        {% if cita.servicio %}
+        <div class="fw-semibold mb-1">{{ cita.servicio.nombre }}</div>
+        {% if cita.servicio.categoria %}
+        <div class="mb-2" style="font-size:.78rem;color:var(--text-2)">
+          {{ cita.servicio.categoria }}
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <span style="font-size:.82rem;color:var(--text-2)">Precio del servicio</span>
+          <span class="fw-bold fs-6" style="color:var(--accent)">Bs {{ cita.servicio.precio }}</span>
+        </div>
+        {% if cita.servicio.descripcion %}
+        <div class="mt-2" style="font-size:.78rem;color:var(--text-3)">
+          {{ cita.servicio.descripcion }}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-secondary" style="font-size:.85rem">
+          <i class="fa-solid fa-circle-info me-1"></i>
+          No se asignó servicio a esta cita.
+        </div>
+        {% endif %}
+
+        <!-- Datos adicionales de la cita -->
+        <hr style="border-color:var(--border)">
+        <div style="font-size:.8rem;color:var(--text-2)">
+          <div class="mb-1">
+            <i class="fa-solid fa-calendar fa-fw me-1"></i>
+            {{ cita.fecha }} &nbsp;
+            <i class="fa-solid fa-clock fa-fw ms-1 me-1"></i>
+            {{ cita.hora_inicio|time:"H:i" }} – {{ cita.hora_fin|time:"H:i" }}
+          </div>
+          {% if cita.doctor %}
+          <div>
+            <i class="fa-solid fa-user-doctor fa-fw me-1"></i>
+            Dr. {{ cita.doctor.get_full_name|default:cita.doctor.username }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Últimos pagos -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fa-solid fa-clock-rotate-left fa-fw me-2"></i>Últimos pagos
+      </div>
+      {% if historial %}
+      <ul class="list-group list-group-flush">
+        {% for p in historial %}
+        <li class="list-group-item d-flex justify-content-between align-items-start"
+            style="background:var(--bg-card);border-color:var(--border);font-size:.82rem">
+          <div>
+            <div class="fw-semibold">{{ p.concepto|truncatechars:40 }}</div>
+            <div style="color:var(--text-2)">
+              {{ p.fecha }} · {{ p.metodo_pago }}
+            </div>
+          </div>
+          <span class="fw-bold" style="color:var(--accent)">Bs {{ p.monto }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="card-body text-secondary" style="font-size:.85rem">
+        Sin pagos registrados.
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ── Columna derecha: formulario de cobro ── -->
+  <div class="col-12 col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <i class="fa-solid fa-money-bill-wave fa-fw me-2"></i>Registrar cobro
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label">{{ form.concepto.label }} <span class="text-danger">*</span></label>
+              {{ form.concepto }}
+              {% if form.concepto.errors %}
+              <div class="text-danger mt-1" style="font-size:.78rem">{{ form.concepto.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">{{ form.metodo_pago.label }} <span class="text-danger">*</span></label>
+              {{ form.metodo_pago }}
+              {% if form.metodo_pago.errors %}
+              <div class="text-danger mt-1" style="font-size:.78rem">{{ form.metodo_pago.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Precio base (solo lectura) -->
+            {% if precio_base %}
+            <div class="col-md-4">
+              <label class="form-label">Precio base (Bs)</label>
+              <input type="text" class="form-control"
+                     value="{{ precio_base }}" readonly
+                     style="background:var(--bg-surface);color:var(--text-2)">
+            </div>
+            {% endif %}
+
+            <div class="col-md-4">
+              <label class="form-label">{{ form.descuento.label }}</label>
+              {{ form.descuento }}
+              {% if form.descuento.errors %}
+              <div class="text-danger mt-1" style="font-size:.78rem">{{ form.descuento.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ form.monto.label }} <span class="text-danger">*</span></label>
+              {{ form.monto }}
+              {% if form.monto.errors %}
+              <div class="text-danger mt-1" style="font-size:.78rem">{{ form.monto.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Resumen en tiempo real -->
+            <div class="col-12">
+              <div class="rounded p-3 d-flex justify-content-between align-items-center"
+                   style="background:var(--bg-surface);border:1.5px solid var(--accent)">
+                <span style="font-size:.85rem;color:var(--text-2)">Total a cobrar</span>
+                <span id="totalDisplay" class="fw-bold"
+                      style="font-size:1.4rem;color:var(--accent)">
+                  Bs {{ form.monto.value|default:precio_base|floatformat:2 }}
+                </span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">{{ form.numero_recibo.label }}</label>
+              {{ form.numero_recibo }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">{{ form.notas.label }}</label>
+              {{ form.notas }}
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="col-12">
+              <div class="alert alert-danger py-2" style="font-size:.85rem">
+                {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="col-12 d-flex justify-content-end gap-2">
+              <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-xmark me-1"></i>Cancelar
+              </a>
+              <button type="submit" class="btn btn-success px-4">
+                <i class="fa-solid fa-check me-1"></i>Registrar cobro
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const precioBase  = parseFloat('{{ precio_base }}') || 0;
+  const inpDescuento = document.getElementById('id_descuento');
+  const inpMonto     = document.getElementById('id_monto');
+  const totalDisplay = document.getElementById('totalDisplay');
+
+  function calcular() {
+    const desc  = parseFloat(inpDescuento.value) || 0;
+    const monto = parseFloat(inpMonto.value);
+    // Si el usuario edita monto directamente, mostrar ese valor
+    const total = isNaN(monto) ? 0 : monto;
+    totalDisplay.textContent = 'Bs ' + total.toFixed(2);
+  }
+
+  function aplicarDescuento() {
+    if (precioBase <= 0) return;
+    const desc = parseFloat(inpDescuento.value) || 0;
+    const nuevoMonto = precioBase * (1 - desc / 100);
+    inpMonto.value = nuevoMonto.toFixed(2);
+    calcular();
+  }
+
+  if (inpDescuento) inpDescuento.addEventListener('input', aplicarDescuento);
+  if (inpMonto)     inpMonto.addEventListener('input', calcular);
+
+  calcular();
+})();
+</script>
+{% endblock %}

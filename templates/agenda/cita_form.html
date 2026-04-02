@@ -1,0 +1,830 @@
+{% extends "base/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'agenda:calendario' %}" class="text-decoration-none text-secondary">Agenda</a> / {{ titulo }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Sección header ───────────────────────────── */
+.form-section-header {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .85rem 1.1rem;
+  border-bottom: 1.5px solid var(--border-light);
+  background: var(--green-pale);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.form-section-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+.form-section-title {
+  font-weight: 700;
+  font-size: .92rem;
+  color: var(--green-deep);
+}
+.form-section-sub {
+  font-size: .72rem;
+  color: var(--text-3);
+  margin-top: .05rem;
+}
+
+/* ── Input con icono ──────────────────────────── */
+.input-icon-wrap { position: relative; }
+.input-icon-wrap .input-icon {
+  position: absolute;
+  left: .85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  font-size: .88rem;
+  pointer-events: none;
+  z-index: 2;
+}
+.input-icon-wrap .input-icon.top { top: .95rem; transform: none; }
+.input-icon-wrap .form-control,
+.input-icon-wrap .form-select {
+  padding-left: 2.4rem;
+}
+
+/* ── Estado buttons ───────────────────────────── */
+.estado-btn {
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 700;
+  padding: .35em .9em;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all .15s;
+  display: inline-flex; align-items: center; gap: .35rem;
+}
+.estado-btn.activo {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+}
+.estado-btn:hover:not(.activo) { opacity: .75; }
+
+/* ── Toggle paciente ──────────────────────────── */
+.pac-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.pac-toggle-btn {
+  padding: .65rem .5rem;
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+}
+.pac-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.pac-toggle-btn:not(.active):hover { background: var(--bg-hover); }
+
+/* ── Nuevo paciente inline ────────────────────── */
+.nuevo-pac-box {
+  background: var(--bg-base);
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+/* ── Botones acción ───────────────────────────── */
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-surface);
+  border-top: 1.5px solid var(--border-light);
+  padding: .9rem 1.1rem;
+  display: flex;
+  gap: .6rem;
+  justify-content: flex-end;
+  z-index: 50;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+@media (max-width: 576px) {
+  .form-actions { border-radius: 0; margin: 0 -.65rem; }
+  .form-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* ── Info sidebar ─────────────────────────────── */
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: .84rem;
+}
+.info-row:last-child { border-bottom: none; }
+.info-row-icon {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem;
+  flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if cita %}
+<!-- ══════════════════════════════════════════════════
+     MODO EDITAR CITA
+══════════════════════════════════════════════════ -->
+
+<!-- Encabezado -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,#4e9ff5,#6ec3fb);
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.25rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(78,159,245,.35)">
+    <i class="fa-solid fa-calendar-pen"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">Editar cita</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">{{ cita.paciente }} · {{ cita.fecha|date:"d/m/Y" }}</div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Formulario -->
+  <div class="col-12 col-lg-8">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Doctor / Sillón -->
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(78,159,245,.14);color:#4e9ff5">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Asignación</div>
+            <div class="form-section-sub">Doctor y sillón para la cita</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:#4e9ff5"></i>Doctor <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-user-doctor" style="color:#4e9ff5"></i>
+                {{ form.doctor }}
+              </div>
+              {% if form.doctor.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.doctor.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-chair fa-xs me-1" style="color:#f59e0b"></i>Sillón
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-chair" style="color:#f59e0b"></i>
+                {{ form.sillon }}
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ec4899"></i>Servicio
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-stethoscope" style="color:#ec4899"></i>
+                {{ form.servicio }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fecha / Hora -->
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(245,158,11,.14);color:#f59e0b">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Fecha y horario</div>
+            <div class="form-section-sub">Cuándo se realizará la cita</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-calendar fa-xs me-1" style="color:#f59e0b"></i>Fecha <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-calendar" style="color:#f59e0b"></i>
+                {{ form.fecha }}
+              </div>
+              {% if form.fecha.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.fecha.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-play fa-xs me-1" style="color:#22c55e"></i>Hora inicio <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-play" style="color:#22c55e;font-size:.7rem"></i>
+                {{ form.hora_inicio }}
+              </div>
+              {% if form.hora_inicio.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.hora_inicio.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-stop fa-xs me-1" style="color:#f87171"></i>Hora fin <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-stop" style="color:#f87171;font-size:.7rem"></i>
+                {{ form.hora_fin }}
+              </div>
+              {% if form.hora_fin.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.hora_fin.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motivo / Notas -->
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+            <i class="fa-solid fa-note-sticky"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Observaciones</div>
+            <div class="form-section-sub">Motivo y notas internas</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fa-solid fa-comment-medical fa-xs me-1" style="color:#8b5cf6"></i>Motivo de consulta
+            </label>
+            <div class="input-icon-wrap">
+              <i class="input-icon top fa-solid fa-comment-medical" style="color:#8b5cf6"></i>
+              {{ form.motivo }}
+            </div>
+          </div>
+          <div>
+            <label class="form-label">
+              <i class="fa-solid fa-lock fa-xs me-1" style="color:var(--text-3)"></i>Notas internas
+            </label>
+            <div class="input-icon-wrap">
+              <i class="input-icon top fa-solid fa-lock" style="color:var(--text-3)"></i>
+              {{ form.notas }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2 mb-3" style="font-size:.85rem">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Sidebar: estado + paciente + servicio -->
+  <div class="col-12 col-lg-4">
+
+    <!-- Estado -->
+    <div class="card mb-3">
+      <div class="form-section-header" style="border-radius:var(--radius) var(--radius) 0 0">
+        <div class="form-section-icon" style="background:rgba(34,197,94,.14);color:#22c55e">
+          <i class="fa-solid fa-circle-dot"></i>
+        </div>
+        <div>
+          <div class="form-section-title">Estado de la cita</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:.5rem">Estado actual</div>
+        <div id="estadoActual" class="mb-3">
+          {% for k, label, color in estados %}
+          {% if k == cita.estado %}
+          <span style="background:{{ color }}20;color:{{ color }};border:2px solid {{ color }};
+                       padding:.35em 1em;border-radius:20px;font-size:.82rem;font-weight:700">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ color }};display:inline-block;margin-right:.35em;vertical-align:middle"></span>
+            {{ label }}
+          </span>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% if cobrada %}
+        <div class="rounded p-2" style="background:#22c55e15;border:1px solid #22c55e30;font-size:.8rem;color:#22c55e">
+          <i class="fa-solid fa-lock me-1"></i>Cita cobrada — estado fijo
+        </div>
+        {% else %}
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:.5rem">Cambiar a</div>
+        <div class="d-flex flex-wrap gap-2" id="estadoBtns">
+          {% for k, label, color in estados %}
+          {% if k != cita.estado and k != 'completada' %}
+          <button type="button" class="estado-btn"
+                  data-estado="{{ k }}"
+                  style="background:{{ color }}18;color:{{ color }};border-color:{{ color }}40">
+            {{ label }}
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div id="estadoMsg" class="mt-2" style="font-size:.76rem;display:none"></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Paciente -->
+    <div class="card mb-3">
+      <div class="form-section-header" style="border-radius:var(--radius) var(--radius) 0 0">
+        <div class="form-section-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div><div class="form-section-title">Paciente</div></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <div class="info-row-icon" style="background:rgba(139,92,246,.12);color:#8b5cf6">
+            <i class="fa-solid fa-user fa-xs"></i>
+          </div>
+          <span class="fw-semibold">{{ cita.paciente }}</span>
+        </div>
+        {% if cita.paciente.telefono %}
+        <div class="info-row">
+          <div class="info-row-icon" style="background:rgba(6,182,212,.12);color:#06b6d4">
+            <i class="fa-solid fa-phone fa-xs"></i>
+          </div>
+          <span>{{ cita.paciente.telefono }}</span>
+        </div>
+        {% endif %}
+        {% with deuda=cita.paciente.get_deuda_pendiente %}
+        <div class="info-row">
+          {% if deuda > 0 %}
+          <div class="info-row-icon" style="background:rgba(248,113,113,.12);color:#f87171">
+            <i class="fa-solid fa-triangle-exclamation fa-xs"></i>
+          </div>
+          <span style="color:#f87171;font-size:.82rem">Deuda: Bs {{ deuda }}</span>
+          {% else %}
+          <div class="info-row-icon" style="background:rgba(34,197,94,.12);color:#22c55e">
+            <i class="fa-solid fa-circle-check fa-xs"></i>
+          </div>
+          <span style="color:#22c55e;font-size:.82rem">Sin deuda pendiente</span>
+          {% endif %}
+        </div>
+        {% endwith %}
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'pacientes:detalle' cita.paciente.pk %}" class="btn btn-sm btn-outline-secondary flex-grow-1">
+            <i class="fa-solid fa-eye me-1"></i>Ver paciente
+          </a>
+          {% if not cobrada %}
+          <a href="{% url 'facturacion:crear_ticket' cita.pk %}" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-money-bill-wave me-1"></i>Cobrar
+          </a>
+          {% else %}
+          {% with tk=cita.tickets.first %}
+          {% if tk %}
+          <a href="{% url 'facturacion:ticket_detalle' tk.pk %}" class="btn btn-sm"
+             style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40">
+            <i class="fa-solid fa-receipt me-1"></i>Ticket
+          </a>
+          {% endif %}
+          {% endwith %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Servicio -->
+    {% if cita.servicio %}
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:.5rem">
+          <i class="fa-solid fa-stethoscope me-1" style="color:#ec4899"></i>Servicio
+        </div>
+        <div class="fw-semibold">{{ cita.servicio.nombre }}</div>
+        <div class="d-flex gap-2 mt-1">
+          <span style="font-size:.8rem;color:var(--accent);font-weight:600">Bs {{ cita.servicio.precio }}</span>
+          <span style="font-size:.8rem;color:var(--text-3)">·</span>
+          <span style="font-size:.8rem;color:var(--text-2)"><i class="fa-solid fa-clock fa-xs me-1"></i>{{ cita.servicio.duracion_minutos }} min</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const CSRF   = '{{ csrf_token }}';
+  const citaId = {{ cita.pk }};
+  const btns   = document.querySelectorAll('#estadoBtns .estado-btn');
+  const msgEl  = document.getElementById('estadoMsg');
+  const colorMap = {
+    programada:'#a78bfa', confirmada:'#4e9ff5', en_curso:'#f59e0b',
+    completada:'#22c55e', cancelada:'#f87171', no_asistio:'#f59e0b'
+  };
+  btns.forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const nuevoEstado = this.dataset.estado;
+      btns.forEach(b => b.disabled = true);
+      const resp = await fetch(`/agenda/citas/${citaId}/estado/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ estado: nuevoEstado }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const col  = colorMap[data.estado] || '#6b7280';
+        document.getElementById('estadoActual').innerHTML =
+          `<span style="background:${col}20;color:${col};border:2px solid ${col};
+                        padding:.35em 1em;border-radius:20px;font-size:.82rem;font-weight:700">
+             <span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block;margin-right:.35em;vertical-align:middle"></span>
+             ${data.display}
+           </span>`;
+        this.style.display = 'none';
+        msgEl.textContent  = '✓ Estado actualizado';
+        msgEl.style.color  = '#34d399';
+        msgEl.style.display = 'block';
+        setTimeout(() => { msgEl.style.display = 'none'; }, 2500);
+      } else {
+        msgEl.textContent  = 'Error al cambiar estado';
+        msgEl.style.color  = '#f87171';
+        msgEl.style.display = 'block';
+      }
+      btns.forEach(b => b.disabled = false);
+    });
+  });
+})();
+</script>
+
+{% else %}
+<!-- ══════════════════════════════════════════════════
+     MODO NUEVA CITA
+══════════════════════════════════════════════════ -->
+
+<!-- Encabezado -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.25rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(45,184,122,.35)">
+    <i class="fa-solid fa-calendar-plus"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">Nueva cita</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">Programa una cita en la agenda</div>
+  </div>
+</div>
+
+<!-- Banner tratamiento vinculado -->
+{% if tratamiento %}
+<div class="d-flex align-items-center gap-3 mb-4 p-3 rounded-3"
+     style="background:{{ tratamiento.servicio.categoria.color|default:'#6b7280' }}12;
+            border:1.5px solid {{ tratamiento.servicio.categoria.color|default:'#6b7280' }}35">
+  <div style="width:40px;height:40px;border-radius:10px;
+              background:{{ tratamiento.servicio.categoria.color|default:'#6b7280' }}22;
+              display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <i class="fa-solid fa-tooth" style="color:{{ tratamiento.servicio.categoria.color|default:'#6b7280' }}"></i>
+  </div>
+  <div class="flex-grow-1 min-width-0">
+    <div class="fw-bold" style="font-size:.88rem">Tratamiento vinculado</div>
+    <div style="font-size:.78rem;color:var(--text-2)">
+      {{ tratamiento.servicio.nombre }} · {{ tratamiento.paciente }} · Bs {{ tratamiento.precio_acordado }}
+    </div>
+  </div>
+  <a href="{% url 'clinico:tratamientos' tratamiento.paciente.pk %}"
+     class="btn btn-sm btn-outline-secondary" style="white-space:nowrap;flex-shrink:0">
+    <i class="fa-solid fa-arrow-up-right-from-square fa-xs me-1"></i>Ver plan
+  </a>
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="paciente_nuevo" id="pacienteNuevoFlag"
+         value="{% if es_nuevo %}1{% else %}0{% endif %}">
+  {{ form.tratamiento }}
+
+  <div class="row g-3">
+
+    <!-- ── Paciente ── -->
+    <div class="col-12">
+      <div class="card">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Paciente</div>
+            <div class="form-section-sub">Selecciona un paciente registrado o ingresa uno nuevo</div>
+          </div>
+        </div>
+        <div class="card-body">
+
+          <!-- Toggle -->
+          <div class="pac-toggle mb-3">
+            <button type="button" id="btnExistente"
+                    class="pac-toggle-btn {% if not es_nuevo %}active{% endif %}">
+              <i class="fa-solid fa-user"></i> Paciente registrado
+            </button>
+            <button type="button" id="btnNuevo"
+                    class="pac-toggle-btn {% if es_nuevo %}active{% endif %}">
+              <i class="fa-solid fa-user-plus"></i> Paciente nuevo
+            </button>
+          </div>
+
+          <!-- Paciente existente -->
+          <div id="secExistente" {% if es_nuevo %}style="display:none"{% endif %}>
+            <label class="form-label">
+              <i class="fa-solid fa-user fa-xs me-1" style="color:#8b5cf6"></i>Seleccionar paciente <span class="text-danger">*</span>
+            </label>
+            <div class="input-icon-wrap">
+              <i class="input-icon fa-solid fa-user" style="color:#8b5cf6"></i>
+              {{ form.paciente }}
+            </div>
+            {% if form.paciente.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.paciente.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Paciente nuevo -->
+          <div id="secNuevo" {% if not es_nuevo %}style="display:none"{% endif %}>
+            <div class="nuevo-pac-box">
+              <div class="mb-3" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:700">
+                <i class="fa-solid fa-user-plus me-1"></i>Datos del nuevo paciente
+              </div>
+              <div class="row g-2">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Nombres <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-user" style="color:var(--accent)"></i>
+                    {{ paciente_form.nombres }}
+                  </div>
+                  {% if paciente_form.nombres.errors %}<div class="text-danger" style="font-size:.75rem">{{ paciente_form.nombres.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Apellidos <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-user" style="color:var(--accent)"></i>
+                    {{ paciente_form.apellidos }}
+                  </div>
+                  {% if paciente_form.apellidos.errors %}<div class="text-danger" style="font-size:.75rem">{{ paciente_form.apellidos.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-6 col-sm-4">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-id-badge fa-xs me-1" style="color:#8b5cf6"></i>C.I.
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-id-badge" style="color:#8b5cf6"></i>
+                    {{ paciente_form.ci }}
+                  </div>
+                </div>
+                <div class="col-6 col-sm-4">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-phone fa-xs me-1" style="color:#06b6d4"></i>Teléfono
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-phone" style="color:#06b6d4"></i>
+                    {{ paciente_form.telefono }}
+                  </div>
+                </div>
+                <div class="col-6 col-sm-4">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-venus-mars fa-xs me-1" style="color:#ec4899"></i>Sexo
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-venus-mars" style="color:#ec4899"></i>
+                    {{ paciente_form.sexo }}
+                  </div>
+                </div>
+                <div class="col-6 col-sm-4">
+                  <label class="form-label" style="font-size:.82rem">
+                    <i class="fa-solid fa-cake-candles fa-xs me-1" style="color:#f59e0b"></i>Fecha nacimiento
+                  </label>
+                  <div class="input-icon-wrap">
+                    <i class="input-icon fa-solid fa-calendar" style="color:#f59e0b"></i>
+                    {{ paciente_form.fecha_nacimiento }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Doctor / Sillón / Servicio ── -->
+    <div class="col-12">
+      <div class="card">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(78,159,245,.14);color:#4e9ff5">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Asignación clínica</div>
+            <div class="form-section-sub">Doctor, sillón y servicio a realizar</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:#4e9ff5"></i>Doctor <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-user-doctor" style="color:#4e9ff5"></i>
+                {{ form.doctor }}
+              </div>
+              {% if form.doctor.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.doctor.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-chair fa-xs me-1" style="color:#f59e0b"></i>Sillón
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-chair" style="color:#f59e0b"></i>
+                {{ form.sillon }}
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ec4899"></i>Servicio
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-stethoscope" style="color:#ec4899"></i>
+                {{ form.servicio }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Fecha / Hora ── -->
+    <div class="col-12">
+      <div class="card">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(245,158,11,.14);color:#f59e0b">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Fecha y horario</div>
+            <div class="form-section-sub">Cuándo se realizará la cita</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-calendar fa-xs me-1" style="color:#f59e0b"></i>Fecha <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-calendar" style="color:#f59e0b"></i>
+                {{ form.fecha }}
+              </div>
+              {% if form.fecha.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.fecha.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-play fa-xs me-1" style="color:#22c55e"></i>Hora inicio <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-play" style="color:#22c55e;font-size:.7rem"></i>
+                {{ form.hora_inicio }}
+              </div>
+              {% if form.hora_inicio.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.hora_inicio.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-stop fa-xs me-1" style="color:#f87171"></i>Hora fin <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-stop" style="color:#f87171;font-size:.7rem"></i>
+                {{ form.hora_fin }}
+              </div>
+              {% if form.hora_fin.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.hora_fin.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Observaciones ── -->
+    <div class="col-12">
+      <div class="card">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+            <i class="fa-solid fa-note-sticky"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Observaciones</div>
+            <div class="form-section-sub">Motivo y notas adicionales (opcional)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fa-solid fa-comment-medical fa-xs me-1" style="color:#8b5cf6"></i>Motivo de consulta
+            </label>
+            <div class="input-icon-wrap">
+              <i class="input-icon top fa-solid fa-comment-medical" style="color:#8b5cf6"></i>
+              {{ form.motivo }}
+            </div>
+          </div>
+          <div>
+            <label class="form-label">
+              <i class="fa-solid fa-lock fa-xs me-1" style="color:var(--text-3)"></i>Notas internas
+            </label>
+            <div class="input-icon-wrap">
+              <i class="input-icon top fa-solid fa-lock" style="color:var(--text-3)"></i>
+              {{ form.notas }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="col-12">
+      <div class="alert alert-danger py-2" style="font-size:.85rem">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Botones -->
+    <div class="col-12">
+      <div class="form-actions">
+        <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="fa-solid fa-calendar-check me-1"></i>Guardar cita
+        </button>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<script>
+(function () {
+  const btnEx  = document.getElementById('btnExistente');
+  const btnNew = document.getElementById('btnNuevo');
+  const secEx  = document.getElementById('secExistente');
+  const secNew = document.getElementById('secNuevo');
+  const flag   = document.getElementById('pacienteNuevoFlag');
+  if (!btnEx) return;
+
+  btnEx.addEventListener('click', function () {
+    secEx.style.display = ''; secNew.style.display = 'none';
+    flag.value = '0';
+    btnEx.classList.add('active');
+    btnNew.classList.remove('active');
+  });
+  btnNew.addEventListener('click', function () {
+    secEx.style.display = 'none'; secNew.style.display = '';
+    flag.value = '1';
+    btnNew.classList.add('active');
+    btnEx.classList.remove('active');
+  });
+})();
+</script>
+
+{% endif %}
+
+{% endblock %}

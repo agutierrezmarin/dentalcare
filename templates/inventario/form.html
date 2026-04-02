@@ -1,0 +1,192 @@
+{% extends "base/base.html" %}
+{% block title %}Nuevo Insumo{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'inventario:lista' %}" class="text-decoration-none text-secondary">Inventario</a> / Nuevo insumo
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section-header {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .85rem 1.1rem;
+  border-bottom: 1.5px solid var(--border-light);
+  background: var(--green-pale);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.form-section-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; flex-shrink: 0;
+}
+.form-section-title { font-weight: 700; font-size: .92rem; color: var(--green-deep); }
+.form-section-sub   { font-size: .72rem; color: var(--text-3); margin-top: .05rem; }
+
+.input-icon-wrap { position: relative; }
+.input-icon-wrap .input-icon {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: .88rem; pointer-events: none; z-index: 2;
+}
+.input-icon-wrap .input-icon.top { top: .95rem; transform: none; }
+.input-icon-wrap .form-control,
+.input-icon-wrap .form-select { padding-left: 2.4rem; }
+
+.form-actions {
+  position: sticky; bottom: 0;
+  background: var(--bg-surface);
+  border-top: 1.5px solid var(--border-light);
+  padding: .9rem 1.1rem;
+  display: flex; gap: .6rem; justify-content: flex-end;
+  z-index: 50; border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: .5rem;
+}
+@media (max-width: 576px) {
+  .form-actions { border-radius: 0; margin: 0 -.65rem; }
+  .form-actions .btn { flex: 1; justify-content: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,#f97316,#fb923c);
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.25rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(249,115,22,.35)">
+    <i class="fa-solid fa-box-open"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">Nuevo insumo</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">Registra un insumo en el inventario</div>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(249,115,22,.14);color:#f97316">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Datos del insumo</div>
+            <div class="form-section-sub">Información general del producto o material</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for field in form %}
+            {% if field.name == 'nombre' %}
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-tag fa-xs me-1" style="color:#f97316"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-tag" style="color:#f97316"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'categoria' %}
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-layer-group fa-xs me-1" style="color:#8b5cf6"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-layer-group" style="color:#8b5cf6"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'descripcion' %}
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-align-left fa-xs me-1" style="color:var(--text-3)"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon top fa-solid fa-align-left" style="color:var(--text-3)"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'unidad' %}
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-ruler fa-xs me-1" style="color:#06b6d4"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-ruler" style="color:#06b6d4"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'stock_actual' %}
+            <div class="col-6 col-sm-3">
+              <label class="form-label">
+                <i class="fa-solid fa-cubes fa-xs me-1" style="color:#22c55e"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-cubes" style="color:#22c55e;font-size:.78rem"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'stock_minimo' %}
+            <div class="col-6 col-sm-3">
+              <label class="form-label">
+                <i class="fa-solid fa-triangle-exclamation fa-xs me-1" style="color:#f59e0b"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-triangle-exclamation" style="color:#f59e0b;font-size:.78rem"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% elif field.name == 'precio_unitario' %}
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-tag fa-xs me-1" style="color:var(--accent)"></i>{{ field.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-bolivar-sign" style="color:var(--accent)"></i>
+                {{ field }}
+              </div>
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% else %}
+            <div class="col-12">
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{% url 'inventario:lista' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Guardar insumo
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base/base.html" %}
+{% block title %}Personal{% endblock %}
+{% block breadcrumb %}Personal{% endblock %}
+
+{% block extra_css %}
+<style>
+.staff-card {
+  border-radius: 14px;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  overflow: hidden;        /* necesario para que el border-radius corte la franja */
+  transition: box-shadow .2s, transform .2s;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.staff-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.staff-card.inactivo { opacity: .72; }
+
+/* Franja de color superior — barra sólida visible */
+.staff-color-bar {
+  height: 10px;
+  width: 100%;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Header de la card */
+.staff-header {
+  padding: 1.1rem 1.1rem .75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+}
+
+/* Avatar */
+.staff-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 3px solid;
+}
+.staff-avatar-letters {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.15rem;
+  flex-shrink: 0;
+  border: 3px solid;
+  letter-spacing: -.02em;
+}
+
+/* Color pill para la agenda */
+.color-pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .68rem; font-weight: 700;
+  padding: .2em .65em; border-radius: 20px;
+  border: 1.5px solid;
+}
+
+/* Stats row */
+.staff-stats {
+  display: flex;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+}
+.staff-stat {
+  flex: 1;
+  text-align: center;
+  padding: .55rem .3rem;
+  border-right: 1px solid var(--border-light);
+}
+.staff-stat:last-child { border-right: none; }
+.staff-stat-val { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.staff-stat-lbl { font-size: .62rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; margin-top: .15rem; }
+
+/* Actions footer */
+.staff-actions {
+  display: flex;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  margin-top: auto;
+}
+
+/* Rol badge */
+.rol-badge {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; padding: .2em .65em; border-radius: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">Gestión de personal</h4>
+    <span style="font-size:.8rem;color:var(--text-2)">{{ enriched|length }} miembro{{ enriched|length|pluralize }}</span>
+  </div>
+  <a href="{% url 'personal:crear' %}" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-user-plus me-1"></i>Nuevo usuario
+  </a>
+</div>
+
+<div class="row g-3">
+  {% for row in enriched %}
+  {% with p=row.p color=p.color_agenda|default:"#22d3ee" %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="staff-card {% if not p.activo %}inactivo{% endif %}"
+         style="border-color: {{ color }}">
+
+      <!-- Franja de color del doctor — sólida, usa el color exacto guardado -->
+      <div class="staff-color-bar" style="background-color: {{ color }}"></div>
+
+      <!-- Header: avatar + datos -->
+      <div class="staff-header">
+
+        <!-- Avatar -->
+        {% if p.foto %}
+        <img src="{{ p.foto.url }}" class="staff-avatar" alt=""
+             style="border-color:{{ color }}">
+        {% else %}
+        <div class="staff-avatar-letters"
+             style="background:color-mix(in srgb,{{ color }} 18%,transparent);
+                    color:{{ color }};
+                    border-color:color-mix(in srgb,{{ color }} 35%,transparent)">
+          {{ p.user.first_name|slice:":1"|upper }}{{ p.user.last_name|slice:":1"|upper }}
+        </div>
+        {% endif %}
+
+        <!-- Datos principales -->
+        <div class="flex-grow-1 min-width-0">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <span style="font-weight:700;font-size:.97rem;line-height:1.2">
+              {{ p.user.get_full_name|default:p.user.username }}
+            </span>
+            {% if not p.activo %}
+            <span class="rol-badge" style="background:#f8717120;color:#f87171;border:1px solid #f8717140">
+              Inactivo
+            </span>
+            {% endif %}
+          </div>
+
+          <!-- Rol badge con color -->
+          {% if p.rol == 'dentista' %}
+          <span class="rol-badge"
+                style="background:color-mix(in srgb,{{ color }} 14%,transparent);
+                       color:{{ color }};
+                       border:1px solid color-mix(in srgb,{{ color }} 35%,transparent)">
+            <i class="fa-solid fa-tooth me-1" style="font-size:.65rem"></i>{{ p.get_rol_display }}
+          </span>
+          {% elif p.rol == 'admin' %}
+          <span class="rol-badge" style="background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa40">
+            <i class="fa-solid fa-shield-halved me-1" style="font-size:.65rem"></i>{{ p.get_rol_display }}
+          </span>
+          {% elif p.rol == 'recepcion' %}
+          <span class="rol-badge" style="background:#4e9ff520;color:#4e9ff5;border:1px solid #4e9ff540">
+            <i class="fa-solid fa-headset me-1" style="font-size:.65rem"></i>{{ p.get_rol_display }}
+          </span>
+          {% else %}
+          <span class="rol-badge" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40">
+            <i class="fa-solid fa-user-nurse me-1" style="font-size:.65rem"></i>{{ p.get_rol_display }}
+          </span>
+          {% endif %}
+
+          <!-- Especialidad -->
+          {% if p.especialidad %}
+          <div style="font-size:.78rem;color:var(--text-2);margin-top:.35rem">
+            <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:{{ color }}"></i>{{ p.especialidad }}
+          </div>
+          {% endif %}
+
+          <!-- Contacto -->
+          {% if p.telefono %}
+          <div style="font-size:.75rem;color:var(--text-2);margin-top:.2rem">
+            <i class="fa-solid fa-phone fa-xs me-1"></i>{{ p.telefono }}
+          </div>
+          {% endif %}
+
+          <!-- Username + email -->
+          <div style="font-size:.72rem;color:var(--text-3);margin-top:.15rem">
+            <i class="fa-solid fa-at fa-xs me-1"></i>{{ p.user.username }}
+            {% if p.user.email %}
+            &nbsp;·&nbsp;<i class="fa-solid fa-envelope fa-xs me-1"></i>{{ p.user.email }}
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- Stats de citas -->
+      <div class="staff-stats">
+        <div class="staff-stat">
+          <div class="staff-stat-val" style="color:{{ color }}">{{ row.total }}</div>
+          <div class="staff-stat-lbl">Total citas</div>
+        </div>
+        <div class="staff-stat">
+          <div class="staff-stat-val" style="color:#4e9ff5">{{ row.hoy }}</div>
+          <div class="staff-stat-lbl">Hoy</div>
+        </div>
+        <div class="staff-stat">
+          <div class="staff-stat-val" style="color:#22c55e">{{ row.completadas }}</div>
+          <div class="staff-stat-lbl">Completadas</div>
+        </div>
+        <div class="staff-stat">
+          <div class="staff-stat-val" style="color:var(--text-1)">
+            {% if p.user.last_login %}
+            {{ p.user.last_login|timesince|slice:":7" }}
+            {% else %}—{% endif %}
+          </div>
+          <div class="staff-stat-lbl">Últ. acceso</div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="staff-actions">
+        <a href="{% url 'personal:editar' p.pk %}"
+           class="btn btn-sm btn-outline-secondary flex-grow-1">
+          <i class="fa-solid fa-pencil me-1"></i>Editar
+        </a>
+        {% if p.rol == 'dentista' or p.rol == 'admin' %}
+        <a href="{% url 'agenda:calendario' %}"
+           class="btn btn-sm"
+           style="background:color-mix(in srgb,{{ color }} 14%,transparent);
+                  color:{{ color }};
+                  border:1.5px solid color-mix(in srgb,{{ color }} 40%,transparent)"
+           title="Ver en calendario">
+          <i class="fa-solid fa-calendar-days"></i>
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'personal:desactivar' p.pk %}"
+              onsubmit="return confirm('¿{{ p.activo|yesno:"Desactivar,Activar" }} a {{ p.user.get_full_name|default:p.user.username }}?')">
+          {% csrf_token %}
+          <button type="submit"
+                  class="btn btn-sm {% if p.activo %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                  title="{{ p.activo|yesno:'Desactivar,Activar' }}">
+            <i class="fa-solid {% if p.activo %}fa-user-slash{% else %}fa-user-check{% endif %}"></i>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+  {% endwith %}
+  {% empty %}
+  <div class="col-12 text-center py-5" style="color:var(--text-3)">
+    <i class="fa-solid fa-users fa-3x mb-3" style="opacity:.2"></i>
+    <p class="mb-0">Sin personal registrado</p>
+    <a href="{% url 'personal:crear' %}" class="btn btn-primary btn-sm mt-3">
+      <i class="fa-solid fa-user-plus me-1"></i>Crear primer usuario
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base/base.html" %}
+{% block title %}Inventario{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Inventario de insumos</h4>
+  </div>
+  <a href="{% url 'inventario:crear' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus me-1"></i>Nuevo insumo
+  </a>
+</div>
+
+{% if alertas %}
+<div class="alert alert-warning mb-4" style="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.2);color:var(--warning)">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>{{ alertas|length }} insumo(s) con stock bajo:</strong>
+  {% for a in alertas %}{{ a.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 table-mobile">
+        <thead>
+          <tr><th>Insumo</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Unidad</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          {% for i in insumos %}
+          <tr>
+            <td data-label="Insumo" style="font-weight:500;font-size:.875rem">{{ i.nombre }}</td>
+            <td data-label="Categoría" style="font-size:.82rem;color:var(--text-2)">{{ i.categoria|default:"—" }}</td>
+            <td data-label="Stock" style="font-family:'Space Mono',monospace;font-size:.85rem;
+                {% if i.necesita_reposicion %}color:var(--danger);font-weight:600{% endif %}">
+              {{ i.stock_actual }}
+            </td>
+            <td data-label="Mínimo" style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--text-2)">{{ i.stock_minimo }}</td>
+            <td data-label="Unidad" style="font-size:.82rem">{{ i.get_unidad_display }}</td>
+            <td data-label="Estado">
+              {% if i.necesita_reposicion %}
+              <span class="badge-estado" style="background:rgba(248,113,113,.15);color:var(--danger)">Reabastecer</span>
+              {% else %}
+              <span class="badge-estado" style="background:rgba(52,211,153,.15);color:var(--success)">OK</span>
+              {% endif %}
+            </td>
+            <td data-label="Acción">
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                      data-bs-target="#modalMov{{ i.pk }}">
+                <i class="bi bi-arrow-left-right"></i>
+              </button>
+            </td>
+          </tr>
+          <!-- Modal movimiento -->
+          <div class="modal fade" id="modalMov{{ i.pk }}" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+              <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+                <div class="modal-header" style="border-color:var(--border)">
+                  <h6 class="modal-title">{{ i.nombre }}</h6>
+                  <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" action="{% url 'inventario:movimiento' i.pk %}">
+                  {% csrf_token %}
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label">Tipo</label>
+                      <select name="tipo" class="form-select">
+                        <option value="entrada">Entrada</option>
+                        <option value="salida">Salida / Uso</option>
+                        <option value="ajuste">Ajuste</option>
+                        <option value="vencido">Baja por vencimiento</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Cantidad</label>
+                      <input type="number" name="cantidad" class="form-control" step="0.01" required>
+                    </div>
+                    <div>
+                      <label class="form-label">Motivo</label>
+                      <input type="text" name="motivo" class="form-control">
+                    </div>
+                  </div>
+                  <div class="modal-footer" style="border-color:var(--border)">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">Sin insumos registrados</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

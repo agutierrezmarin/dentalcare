@@ -1,0 +1,325 @@
+{% extends "base/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section-header {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .85rem 1.1rem;
+  border-bottom: 1.5px solid var(--border-light);
+  background: var(--green-pale);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.form-section-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; flex-shrink: 0;
+}
+.form-section-title { font-weight: 700; font-size: .92rem; color: var(--green-deep); }
+.form-section-sub   { font-size: .72rem; color: var(--text-3); margin-top: .05rem; }
+
+.input-icon-wrap { position: relative; }
+.input-icon-wrap .input-icon {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: .88rem; pointer-events: none; z-index: 2;
+}
+.input-icon-wrap .form-control,
+.input-icon-wrap .form-select { padding-left: 2.4rem; }
+
+.form-actions {
+  position: sticky; bottom: 0;
+  background: var(--bg-surface);
+  border-top: 1.5px solid var(--border-light);
+  padding: .9rem 1.1rem;
+  display: flex; gap: .6rem; justify-content: flex-end;
+  z-index: 50; border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: .5rem;
+}
+@media (max-width: 576px) {
+  .form-actions { border-radius: 0; margin: 0 -.65rem; }
+  .form-actions .btn { flex: 1; justify-content: center; }
+}
+
+#dropZone.dz-over {
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface)) !important;
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'personal:lista' %}" class="text-decoration-none text-secondary">Personal</a>
+  / {{ titulo }}
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.25rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(45,184,122,.35)">
+    <i class="fa-solid {% if perfil %}fa-user-pen{% else %}fa-user-plus{% endif %}"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">{{ titulo }}</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">
+      {% if perfil %}Modifica los datos del usuario{% else %}Completa los campos para crear un nuevo usuario{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- ── Cuenta de acceso ── -->
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(78,159,245,.14);color:#4e9ff5">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Cuenta de acceso</div>
+            <div class="form-section-sub">Credenciales para iniciar sesión en el sistema</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Nombre <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-user" style="color:var(--accent)"></i>
+                {{ u_form.first_name }}
+              </div>
+              {% if u_form.first_name.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Apellido <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-user" style="color:var(--accent)"></i>
+                {{ u_form.last_name }}
+              </div>
+              {% if u_form.last_name.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-at fa-xs me-1" style="color:#8b5cf6"></i>Usuario <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-at" style="color:#8b5cf6"></i>
+                {{ u_form.username }}
+              </div>
+              {% if u_form.username.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.username.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-envelope fa-xs me-1" style="color:#06b6d4"></i>Email
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-envelope" style="color:#06b6d4"></i>
+                {{ u_form.email }}
+              </div>
+              {% if u_form.email.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.email.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% if not perfil %}
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-lock fa-xs me-1" style="color:#f59e0b"></i>Contraseña <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-lock" style="color:#f59e0b"></i>
+                {{ u_form.password1 }}
+              </div>
+              {% if u_form.password1.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.password1.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-lock fa-xs me-1" style="color:#f59e0b"></i>Confirmar contraseña <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-lock" style="color:#f59e0b"></i>
+                {{ u_form.password2 }}
+              </div>
+              {% if u_form.password2.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.password2.errors.0 }}</div>{% endif %}
+            </div>
+            {% else %}
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-key fa-xs me-1" style="color:#f59e0b"></i>Nueva contraseña
+                <span class="text-secondary ms-1" style="font-size:.78rem;font-weight:400">(opcional — dejar vacío para no cambiar)</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-key" style="color:#f59e0b"></i>
+                {{ u_form.nueva_password }}
+              </div>
+              {% if u_form.nueva_password.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ u_form.nueva_password.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Perfil clínico ── -->
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+            <i class="fa-solid fa-id-card-clip"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Perfil clínico</div>
+            <div class="form-section-sub">Rol, especialidad y datos de contacto</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-shield-halved fa-xs me-1" style="color:#a78bfa"></i>Rol <span class="text-danger">*</span>
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-shield-halved" style="color:#a78bfa"></i>
+                {{ p_form.rol }}
+              </div>
+              {% if p_form.rol.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ p_form.rol.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-phone fa-xs me-1" style="color:#06b6d4"></i>Teléfono
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-phone" style="color:#06b6d4"></i>
+                {{ p_form.telefono }}
+              </div>
+              {% if p_form.telefono.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ p_form.telefono.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ec4899"></i>Especialidad
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-stethoscope" style="color:#ec4899"></i>
+                {{ p_form.especialidad }}
+              </div>
+              {% if p_form.especialidad.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ p_form.especialidad.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">
+                <i class="fa-solid fa-palette fa-xs me-1" style="color:#f59e0b"></i>Color en agenda
+              </label>
+              <div class="d-flex gap-2 align-items-center">
+                {{ p_form.color_agenda }}
+                <span style="font-size:.75rem;color:var(--text-3)">Representación en el calendario</span>
+              </div>
+              {% if p_form.color_agenda.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ p_form.color_agenda.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Foto drag & drop -->
+            <div class="col-12">
+              <label class="form-label">
+                <i class="fa-solid fa-camera fa-xs me-1" style="color:var(--accent)"></i>Foto de perfil
+              </label>
+              <div id="dropZone"
+                   style="border:2px dashed var(--border);border-radius:12px;padding:1.25rem;
+                          text-align:center;cursor:pointer;transition:all .2s;
+                          background:var(--bg-base);position:relative"
+                   onclick="document.getElementById('fotoInput').click()"
+                   ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+                <div id="dzPreview" style="display:flex;flex-direction:column;align-items:center;gap:.6rem">
+                  {% if perfil and perfil.foto %}
+                  <img id="previewImg" src="{{ perfil.foto.url }}"
+                       style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)">
+                  <div style="font-size:.78rem;color:var(--text-2)">
+                    <i class="fa-solid fa-arrows-rotate me-1" style="color:var(--accent)"></i>Arrastra una nueva imagen o haz clic para cambiar
+                  </div>
+                  {% else %}
+                  <img id="previewImg" src="" alt=""
+                       style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);display:none">
+                  <i class="fa-solid fa-cloud-arrow-up fa-2x" style="color:var(--text-3);opacity:.5"></i>
+                  <div style="font-size:.82rem;color:var(--text-2)">
+                    Arrastra tu foto o <span style="color:var(--accent);font-weight:600">haz clic para seleccionar</span>
+                  </div>
+                  <div style="font-size:.7rem;color:var(--text-3)">JPG, PNG, WEBP · máx. 5 MB</div>
+                  {% endif %}
+                  <div id="dzFileName" style="font-size:.72rem;color:var(--text-3)"></div>
+                </div>
+              </div>
+              <input type="file" id="fotoInput" name="foto" accept="image/*"
+                     style="display:none" onchange="previewFile(this)">
+              {% if p_form.foto.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ p_form.foto.errors.0 }}</div>{% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {% if u_form.non_field_errors or p_form.non_field_errors %}
+      <div class="alert alert-danger mb-3 py-2" style="font-size:.85rem">
+        {% for e in u_form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+        {% for e in p_form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <a href="{% url 'personal:lista' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="fa-solid {% if perfil %}fa-floppy-disk{% else %}fa-check{% endif %} me-1"></i>
+          {% if perfil %}Guardar cambios{% else %}Crear usuario{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    alert('La imagen supera los 5 MB.'); input.value = ''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('previewImg');
+    img.src = e.target.result; img.style.display = 'block';
+    img.style.borderColor = 'var(--accent)';
+    const icon = document.querySelector('#dropZone .fa-cloud-arrow-up');
+    if (icon) icon.style.display = 'none';
+    document.getElementById('dzFileName').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+function dzOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('dz-over'); }
+function dzLeave(e) { document.getElementById('dropZone').classList.remove('dz-over'); }
+function dzDrop(e)  {
+  e.preventDefault(); document.getElementById('dropZone').classList.remove('dz-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const input = document.getElementById('fotoInput');
+  const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+  previewFile(input);
+}
+</script>
+{% endblock %}

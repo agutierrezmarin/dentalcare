@@ -1,0 +1,70 @@
+{% extends "base/base.html" %}
+{% block title %}Citas de hoy{% endblock %}
+{% block breadcrumb %}Agenda / Hoy{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Citas de hoy</h4>
+    <p class="text-secondary mb-0" style="font-size:.82rem">{{ hoy|date:"l d \d\e F \d\e Y" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-calendar3 me-1"></i>Calendario
+    </a>
+    <a href="{% url 'agenda:crear_cita' %}?fecha={{ hoy|date:'Y-m-d' }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus me-1"></i>Nueva cita
+    </a>
+  </div>
+</div>
+
+{% if citas %}
+<div class="row g-3">
+  {% for c in citas %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card" style="border-left:3px solid
+      {% if c.estado == 'confirmada' %}var(--accent)
+      {% elif c.estado == 'en_curso' %}var(--success)
+      {% elif c.estado == 'completada' %}var(--text-3)
+      {% elif c.estado == 'cancelada' %}var(--danger)
+      {% else %}var(--info){% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-weight:600;font-size:.95rem">{{ c.paciente.apellidos }} {{ c.paciente.nombres }}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-2)">
+              {{ c.hora_inicio|time:"H:i" }} – {{ c.hora_fin|time:"H:i" }}
+            </div>
+          </div>
+          <span class="badge-estado estado-{{ c.estado }}">{{ c.get_estado_display }}</span>
+        </div>
+        <hr style="border-color:var(--border);margin:.75rem 0">
+        <div style="font-size:.82rem;color:var(--text-2)">
+          <div><i class="bi bi-person-badge me-1"></i>{{ c.doctor.get_full_name|default:"Sin asignar" }}</div>
+          {% if c.sillon %}<div><i class="bi bi-hospital me-1"></i>{{ c.sillon }}</div>{% endif %}
+          {% if c.servicio %}<div><i class="bi bi-clipboard2-pulse me-1"></i>{{ c.servicio }}</div>{% endif %}
+          {% if c.motivo %}<div class="mt-1 fst-italic">{{ c.motivo }}</div>{% endif %}
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'pacientes:detalle' c.paciente.pk %}" class="btn btn-sm btn-outline-secondary flex-fill">
+            <i class="bi bi-person me-1"></i>Paciente
+          </a>
+          <a href="{% url 'agenda:editar_cita' c.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-secondary">
+  <i class="bi bi-calendar-x" style="font-size:3rem;opacity:.2"></i>
+  <p class="mt-3">Sin citas programadas para hoy</p>
+  <a href="{% url 'agenda:crear_cita' %}?fecha={{ hoy|date:'Y-m-d' }}" class="btn btn-primary">
+    <i class="bi bi-plus me-1"></i>Agregar cita
+  </a>
+</div>
+{% endif %}
+{% endblock %}

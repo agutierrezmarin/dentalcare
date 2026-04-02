@@ -1,0 +1,52 @@
+{% extends "base/base.html" %}
+{% block title %}Cita{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'agenda:calendario' %}" class="text-decoration-none text-secondary">Agenda</a> / Detalle cita
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-calendar-event me-2"></i>Detalle de cita</span>
+        <span class="badge-estado estado-{{ cita.estado }}">{{ cita.get_estado_display }}</span>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0" style="font-size:.875rem">
+          <dt class="col-sm-4 text-secondary">Paciente</dt>
+          <dd class="col-sm-8">
+            <a href="{% url 'pacientes:detalle' cita.paciente.pk %}">{{ cita.paciente }}</a>
+          </dd>
+          <dt class="col-sm-4 text-secondary">Doctor</dt>
+          <dd class="col-sm-8">{{ cita.doctor.get_full_name|default:"—" }}</dd>
+          <dt class="col-sm-4 text-secondary">Fecha</dt>
+          <dd class="col-sm-8">{{ cita.fecha|date:"l d \d\e F \d\e Y" }}</dd>
+          <dt class="col-sm-4 text-secondary">Horario</dt>
+          <dd class="col-sm-8" style="font-family:'Space Mono',monospace">
+            {{ cita.hora_inicio|time:"H:i" }} – {{ cita.hora_fin|time:"H:i" }}
+            ({{ cita.duracion_minutos }} min)
+          </dd>
+          <dt class="col-sm-4 text-secondary">Sillón</dt>
+          <dd class="col-sm-8">{{ cita.sillon|default:"—" }}</dd>
+          <dt class="col-sm-4 text-secondary">Servicio</dt>
+          <dd class="col-sm-8">{{ cita.servicio|default:"—" }}</dd>
+          <dt class="col-sm-4 text-secondary">Motivo</dt>
+          <dd class="col-sm-8">{{ cita.motivo|default:"—" }}</dd>
+          <dt class="col-sm-4 text-secondary">Notas</dt>
+          <dd class="col-sm-8">{{ cita.notas|default:"—" }}</dd>
+        </dl>
+        <hr style="border-color:var(--border)">
+        <div class="d-flex gap-2">
+          <a href="{% url 'agenda:editar_cita' cita.pk %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </a>
+          <a href="{% url 'pacientes:detalle' cita.paciente.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-person me-1"></i>Ver paciente
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

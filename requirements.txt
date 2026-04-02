@@ -1,0 +1,4 @@
+Django==5.1.7
+psycopg[binary]==3.2.4
+Pillow==11.1.0
+python-dateutil==2.9.0

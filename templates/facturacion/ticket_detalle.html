@@ -1,0 +1,320 @@
+{% extends "base/base.html" %}
+{% block title %}Ticket {{ ticket.numero }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'agenda:calendario' %}" class="text-decoration-none text-secondary">Agenda</a> /
+  Ticket {{ ticket.numero }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  #recibo { box-shadow: none !important; border: 1px solid #ddd !important; }
+  body { background: #fff !important; }
+}
+#recibo {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+.ticket-header {
+  text-align: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed var(--border);
+  margin-bottom: 1rem;
+}
+.ticket-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: .04em;
+}
+.tk-label {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-3);
+  font-weight: 700;
+}
+.tk-val { font-size: .88rem; color: var(--text-1); }
+.items-table th {
+  font-size: .7rem;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 700;
+  background: var(--bg-surface);
+}
+.items-table td { font-size: .83rem; vertical-align: middle; }
+.total-row td { font-weight: 700; font-size: .95rem; }
+.total-grand td { font-weight: 800; font-size: 1.1rem; color: var(--accent); }
+.info-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .85rem 1rem;
+  margin-bottom: .75rem;
+}
+.info-card-title {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-3);
+  font-weight: 700;
+  margin-bottom: .4rem;
+}
+.proxima-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: .5rem .85rem;
+  font-size: .82rem;
+}
+.visita-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .8rem;
+}
+.visita-row:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- ── Recibo (columna principal) ── -->
+  <div class="col-12 col-lg-7">
+
+    <div class="d-flex justify-content-between align-items-center mb-2 no-print flex-wrap gap-2">
+      <span class="text-secondary" style="font-size:.82rem">
+        <i class="fa-solid fa-user-pen fa-xs me-1"></i>{{ ticket.registrado_por.get_full_name|default:ticket.registrado_por.username }}
+      </span>
+      <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-print me-1"></i><span class="d-none d-sm-inline">Imprimir</span>
+        </button>
+        <a href="{% url 'agenda:calendario' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-calendar me-1"></i><span class="d-none d-sm-inline">Calendario</span>
+        </a>
+      </div>
+    </div>
+
+    <div id="recibo">
+
+      <!-- Encabezado -->
+      <div class="ticket-header">
+        <div style="font-size:.78rem;color:var(--text-2);font-weight:600;letter-spacing:.05em;text-transform:uppercase">
+          AdmiDent — Gestión Dental
+        </div>
+        <div class="ticket-num mt-1">{{ ticket.numero }}</div>
+        <div style="font-size:.78rem;color:var(--text-2)">
+          {{ ticket.fecha }} &nbsp;·&nbsp; {{ ticket.hora|time:"H:i" }}
+        </div>
+        <span class="badge mt-1"
+              style="background:{% if ticket.estado == 'pagado' %}#34d39920;color:#34d399{% else %}#f8712220;color:#f87171{% endif %};font-size:.72rem">
+          {{ ticket.get_estado_display }}
+        </span>
+      </div>
+
+      <!-- Datos del paciente y doctor -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <div class="tk-label">Paciente</div>
+          <div class="tk-val fw-semibold">{{ ticket.paciente }}</div>
+          {% if ticket.paciente.telefono %}
+          <div style="font-size:.75rem;color:var(--text-2)">
+            <i class="fa-solid fa-phone fa-fw"></i> {{ ticket.paciente.telefono }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-6">
+          <div class="tk-label">Doctor</div>
+          <div class="tk-val">
+            {% if ticket.doctor %}Dr. {{ ticket.doctor.get_full_name|default:ticket.doctor.username }}{% else %}—{% endif %}
+          </div>
+          <div class="tk-label mt-1">Método de pago</div>
+          <div class="tk-val">{{ ticket.metodo_pago }}</div>
+        </div>
+        {% if ticket.cita %}
+        <div class="col-12">
+          <div class="tk-label">Cita</div>
+          <div class="tk-val">
+            {{ ticket.cita.fecha }}
+            {{ ticket.cita.hora_inicio|time:"H:i" }} – {{ ticket.cita.hora_fin|time:"H:i" }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Ítems -->
+      <div class="table-responsive mb-3">
+        <table class="table table-sm items-table mb-0 table-mobile">
+          <thead>
+            <tr>
+              <th class="ps-2">Descripción</th>
+              <th class="text-center">Cant.</th>
+              <th class="text-end">Precio</th>
+              <th class="text-end">Desc.%</th>
+              <th class="text-end pe-2">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in ticket.items.all %}
+            <tr>
+              <td class="ps-2" data-label="Descripción">
+                {{ it.descripcion }}
+                <span class="ms-1"
+                      style="font-size:.65rem;padding:.1em .4em;border-radius:3px;
+                             {% if it.tipo == 'servicio' %}background:#a78bfa22;color:#a78bfa{% else %}background:#34d39922;color:#34d399{% endif %}">
+                  {{ it.get_tipo_display }}
+                </span>
+              </td>
+              <td class="text-center" data-label="Cant.">{{ it.cantidad }}</td>
+              <td class="text-end" data-label="Precio">Bs {{ it.precio_unitario }}</td>
+              <td class="text-end" data-label="Desc.%">
+                {% if it.descuento > 0 %}{{ it.descuento }}%{% else %}—{% endif %}
+              </td>
+              <td class="text-end pe-2 fw-semibold" data-label="Subtotal" style="color:var(--accent)">
+                Bs {{ it.subtotal }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="total-row" style="border-top:2px solid var(--border)">
+              <td colspan="4" class="text-end ps-2" style="color:var(--text-2)">Subtotal</td>
+              <td class="text-end pe-2">Bs {{ ticket.subtotal }}</td>
+            </tr>
+            {% if ticket.descuento_global > 0 %}
+            <tr style="color:#f87171">
+              <td colspan="4" class="text-end" style="font-size:.83rem">
+                Descuento ({{ ticket.descuento_global }}%)
+              </td>
+              <td class="text-end pe-2" style="font-size:.83rem">– Bs {{ ticket.descuento_monto }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-grand" style="border-top:2px dashed var(--border)">
+              <td colspan="4" class="text-end ps-2">TOTAL</td>
+              <td class="text-end pe-2">Bs {{ ticket.total }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {% if ticket.notas %}
+      <div style="font-size:.78rem;color:var(--text-2);border-top:1px dashed var(--border);padding-top:.75rem">
+        <i class="fa-solid fa-note-sticky me-1"></i><strong>Nota:</strong> {{ ticket.notas }}
+      </div>
+      {% endif %}
+
+      <div style="text-align:center;font-size:.68rem;color:var(--text-3);margin-top:1rem;padding-top:.75rem;border-top:1px dashed var(--border)">
+        Gracias por su visita · AdmiDent
+      </div>
+
+    </div><!-- /recibo -->
+
+  </div><!-- /col-lg-7 -->
+
+  <!-- ── Resumen del paciente ── -->
+  <div class="col-12 col-lg-5 no-print">
+
+    <!-- Estado de cuenta -->
+    <div class="info-card">
+      <div class="info-card-title"><i class="fa-solid fa-wallet me-1"></i>Estado de cuenta</div>
+      {% if deuda > 0 %}
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation fa-lg" style="color:#f87171"></i>
+        <div>
+          <div style="font-size:.78rem;color:#f87171;font-weight:700">Deuda pendiente</div>
+          <div class="fw-bold fs-5" style="color:#f87171">Bs {{ deuda }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-circle-check fa-lg" style="color:#34d399"></i>
+        <div>
+          <div style="font-size:.78rem;color:#34d399;font-weight:700">Sin deuda</div>
+          <div style="font-size:.82rem;color:var(--text-2)">Cuenta al día</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Próxima cita -->
+    <div class="info-card">
+      <div class="info-card-title"><i class="fa-solid fa-calendar-check me-1"></i>Próxima cita</div>
+      {% if proxima_cita %}
+      <div class="proxima-badge">
+        <div class="fw-bold">{{ proxima_cita.fecha }}</div>
+        <div style="font-size:.78rem;opacity:.85">
+          {{ proxima_cita.hora_inicio|time:"H:i" }} – {{ proxima_cita.hora_fin|time:"H:i" }}
+          {% if proxima_cita.doctor %}· Dr. {{ proxima_cita.doctor.get_full_name|default:proxima_cita.doctor.username }}{% endif %}
+        </div>
+        {% if proxima_cita.servicio %}
+        <div style="font-size:.75rem;opacity:.8;margin-top:.2rem">
+          <i class="fa-solid fa-tooth me-1"></i>{{ proxima_cita.servicio.nombre }}
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div style="font-size:.83rem;color:var(--text-2)">
+        <i class="fa-solid fa-calendar-xmark me-1"></i>Sin próximas citas programadas
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Historial de visitas -->
+    <div class="info-card">
+      <div class="info-card-title"><i class="fa-solid fa-clock-rotate-left me-1"></i>Historial de visitas</div>
+      {% if historial_citas %}
+        {% for c in historial_citas %}
+        <div class="visita-row">
+          <div>
+            <div style="font-weight:600;font-size:.82rem">{{ c.fecha }}</div>
+            <div style="font-size:.73rem;color:var(--text-2)">
+              {{ c.hora_inicio|time:"H:i" }}
+              {% if c.servicio %} · {{ c.servicio.nombre|truncatechars:30 }}{% endif %}
+            </div>
+          </div>
+          <span class="badge"
+                style="font-size:.65rem;
+                {% if c.estado == 'completada' %}background:#6b728020;color:#6b7280
+                {% elif c.estado == 'cancelada' %}background:#f8712220;color:#f87171
+                {% elif c.estado == 'no_asistio' %}background:#f59e0b20;color:#f59e0b
+                {% else %}background:#4e9ff520;color:#4e9ff5{% endif %}">
+            {{ c.get_estado_display }}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="font-size:.83rem;color:var(--text-2)">Sin historial de visitas.</div>
+      {% endif %}
+    </div>
+
+    <!-- Tickets recientes -->
+    <div class="info-card">
+      <div class="info-card-title"><i class="fa-solid fa-receipt me-1"></i>Cobros recientes</div>
+      {% if tickets_recientes %}
+        {% for tk in tickets_recientes %}
+        <div class="visita-row">
+          <div>
+            <div style="font-weight:600;font-size:.82rem">{{ tk.numero }}</div>
+            <div style="font-size:.73rem;color:var(--text-2)">
+              {{ tk.fecha }} · {{ tk.metodo_pago }}
+            </div>
+          </div>
+          <span class="fw-bold" style="color:var(--accent);font-size:.85rem">Bs {{ tk.total }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="font-size:.83rem;color:var(--text-2)">Sin cobros anteriores.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- /col-lg-5 -->
+
+</div>
+{% endblock %}

@@ -1,0 +1,269 @@
+{% extends "base/base.html" %}
+{% block title %}Servicios{% endblock %}
+{% block breadcrumb %}Clínico / Servicios{% endblock %}
+
+{% block extra_css %}
+<style>
+.svc-row td { vertical-align: middle; }
+.svc-row.inactivo td { opacity: .45; }
+.svc-row.inactivo td:last-child { opacity: 1; }
+.cat-header {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--text-2);
+  padding: .5rem .75rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+.cat-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">Servicios y aranceles</h4>
+    <span style="font-size:.8rem;color:var(--text-2)">
+      {{ servicios|length }} servicio{{ servicios|length|pluralize }}
+      {% if mostrar_inactivos %} (incluyendo deshabilitados){% endif %}
+    </span>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% if mostrar_inactivos %}{% url 'clinico:servicios' %}{% else %}{% url 'clinico:servicios' %}?inactivos=1{% endif %}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="fa-solid {% if mostrar_inactivos %}fa-eye-slash{% else %}fa-eye{% endif %} me-1"></i>
+      {% if mostrar_inactivos %}Ocultar deshabilitados{% else %}Ver deshabilitados{% endif %}
+    </a>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevo">
+      <i class="fa-solid fa-plus me-1"></i>Nuevo servicio
+    </button>
+  </div>
+</div>
+
+<!-- Tabla agrupada por categoría -->
+{% regroup servicios by categoria as cat_groups %}
+{% for group in cat_groups %}
+<div class="card mb-3">
+  <div class="cat-header">
+    <span class="cat-dot" style="background:{{ group.grouper.color|default:'#6b7280' }}"></span>
+    {{ group.grouper.nombre|default:"Sin categoría" }}
+    <span style="margin-left:auto;font-weight:400;color:var(--text-3)">
+      {{ group.list|length }} servicio{{ group.list|length|pluralize }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 table-mobile">
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th class="text-center">Duración</th>
+          <th class="text-end">Precio</th>
+          <th class="text-center">Estado</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in group.list %}
+        <tr class="svc-row {% if not s.activo %}inactivo{% endif %}">
+          <td data-label="Servicio">
+            <div>
+              <div style="font-weight:600;font-size:.88rem">{{ s.nombre }}</div>
+              {% if s.descripcion %}
+              <div style="font-size:.75rem;color:var(--text-2)">{{ s.descripcion|truncatechars:80 }}</div>
+              {% endif %}
+            </div>
+          </td>
+          <td class="text-center" data-label="Duración"
+              style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--text-2)">
+            {{ s.duracion_minutos }} min
+          </td>
+          <td class="text-end" data-label="Precio"
+              style="font-weight:700;font-size:.92rem">Bs {{ s.precio }}</td>
+          <td class="text-center" data-label="Estado">
+            {% if s.activo %}
+            <span style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;
+                         padding:.2em .75em;border-radius:20px;font-size:.7rem;font-weight:700">
+              <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:.3em;vertical-align:middle"></span>
+              Activo
+            </span>
+            {% else %}
+            <span style="background:#f8717120;color:#f87171;border:1px solid #f8717140;
+                         padding:.2em .75em;border-radius:20px;font-size:.7rem;font-weight:700">
+              <span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;margin-right:.3em;vertical-align:middle"></span>
+              Inactivo
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-center" data-label="Acciones">
+            <div class="d-flex gap-1 justify-content-start justify-content-md-center">
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      title="Editar" onclick="abrirEditar({{ s.pk }})">
+                <i class="fa-solid fa-pencil" style="font-size:.75rem"></i>
+              </button>
+              <form method="post" action="{% url 'clinico:toggle_servicio' s.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm"
+                        title="{% if s.activo %}Deshabilitar{% else %}Habilitar{% endif %}"
+                        style="{% if s.activo %}background:#f8717115;color:#f87171;border:1px solid #f8717130{% else %}background:#22c55e15;color:#22c55e;border:1px solid #22c55e30{% endif %}">
+                  <i class="fa-solid {% if s.activo %}fa-toggle-on{% else %}fa-toggle-off{% endif %}" style="font-size:.85rem"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="card">
+  <div class="card-body text-center py-5" style="color:var(--text-3)">
+    <i class="fa-solid fa-stethoscope fa-3x mb-3" style="opacity:.2"></i>
+    <p class="mb-0">No hay servicios registrados</p>
+  </div>
+</div>
+{% endfor %}
+
+
+<!-- ══ Modal: Nuevo servicio ══ -->
+<div class="modal fade" id="modalNuevo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title"><i class="fa-solid fa-plus fa-fw me-1"></i>Nuevo servicio</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'clinico:servicios' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Categoría</label>
+              {{ form.categoria }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Nombre del servicio <span class="text-danger">*</span></label>
+              {{ form.nombre }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Descripción</label>
+              {{ form.descripcion }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Precio (Bs) <span class="text-danger">*</span></label>
+              {{ form.precio }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Duración (min)</label>
+              {{ form.duracion_minutos }}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-check me-1"></i>Crear servicio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ Modal: Editar servicio ══ -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title"><i class="fa-solid fa-pencil fa-fw me-1"></i>Editar servicio</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formEditar">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Categoría</label>
+              <select name="categoria" id="editCategoria" class="form-select">
+                <option value="">— Sin categoría —</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.pk }}">{{ cat.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Nombre del servicio <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" id="editNombre" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Descripción</label>
+              <textarea name="descripcion" id="editDescripcion" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Precio (Bs) <span class="text-danger">*</span></label>
+              <input type="number" name="precio" id="editPrecio" class="form-control"
+                     step="0.01" min="0" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Duración (min)</label>
+              <input type="number" name="duracion_minutos" id="editDuracion" class="form-control"
+                     min="1">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function abrirEditar(pk) {
+  const url = `/clinico/servicios/${pk}/editar/`;
+
+  // Mostrar modal con spinner mientras carga
+  const modal = new bootstrap.Modal(document.getElementById('modalEditar'));
+  const body  = document.querySelector('#modalEditar .modal-body');
+  const btnGuardar = document.querySelector('#formEditar button[type="submit"]');
+
+  body.style.opacity    = '.4';
+  btnGuardar.disabled   = true;
+  modal.show();
+
+  try {
+    const resp = await fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!resp.ok) throw new Error('Error al obtener datos');
+    const d = await resp.json();
+
+    document.getElementById('formEditar').action       = url;
+    document.getElementById('editNombre').value        = d.nombre;
+    document.getElementById('editDescripcion').value   = d.descripcion;
+    document.getElementById('editPrecio').value        = d.precio;
+    document.getElementById('editDuracion').value      = d.duracion_minutos;
+    document.getElementById('editCategoria').value     = d.categoria_pk;
+  } catch (e) {
+    alert('No se pudieron cargar los datos del servicio.');
+    modal.hide();
+  } finally {
+    body.style.opacity  = '1';
+    btnGuardar.disabled = false;
+  }
+}
+</script>
+{% endblock %}

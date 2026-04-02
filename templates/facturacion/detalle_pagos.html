@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% block title %}Pagos - {{ paciente }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'pacientes:lista' %}" class="text-decoration-none text-secondary">Pacientes</a>
+  / <a href="{% url 'pacientes:detalle' paciente.pk %}" class="text-decoration-none text-secondary">{{ paciente }}</a>
+  / Pagos
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Control de pagos</h4>
+    <p class="text-secondary mb-0" style="font-size:.82rem">{{ paciente }}</p>
+  </div>
+  <a href="{% url 'facturacion:pago_paciente' paciente.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus me-1"></i>Registrar pago
+  </a>
+</div>
+
+<!-- Resumen -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+      <div>
+        <div class="stat-value">Bs {{ total_pagado|floatformat:0 }}</div>
+        <div class="stat-label">Total pagado</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-exclamation-circle-fill"></i></div>
+      <div>
+        <div class="stat-value">Bs {{ deuda_pendiente|floatformat:0 }}</div>
+        <div class="stat-label">Deuda pendiente</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Cuotas -->
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar-week me-2"></i>Plan de pagos</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 table-mobile">
+          <thead><tr><th>Tratamiento</th><th>Cuota</th><th>Monto</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for c in planes %}
+            <tr>
+              <td data-label="Tratamiento" style="font-size:.82rem">{{ c.tratamiento.servicio.nombre }}</td>
+              <td data-label="Cuota" style="font-family:'Space Mono',monospace;font-size:.8rem">{{ c.numero_cuota }}</td>
+              <td data-label="Monto" style="font-weight:600">Bs {{ c.monto }}</td>
+              <td data-label="Vencimiento" style="font-size:.82rem;{% if c.esta_vencida %}color:var(--danger){% endif %}">
+                {{ c.fecha_vencimiento|date:"d/m/Y" }}
+              </td>
+              <td data-label="Estado"><span class="badge-estado estado-{{ c.estado }}">{{ c.get_estado_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr class="table-empty-row"><td colspan="5" class="text-center text-secondary py-3">Sin plan de pagos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial pagos -->
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-receipt me-2"></i>Historial de pagos</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 table-mobile">
+          <thead><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th class="text-end">Monto</th></tr></thead>
+          <tbody>
+            {% for p in pagos %}
+            <tr>
+              <td data-label="Fecha" style="font-family:'Space Mono',monospace;font-size:.78rem">{{ p.fecha|date:"d/m/Y" }}</td>
+              <td data-label="Concepto" style="font-size:.82rem">{{ p.concepto }}</td>
+              <td data-label="Método" style="font-size:.78rem;color:var(--text-2)">{{ p.metodo_pago }}</td>
+              <td data-label="Monto" style="font-weight:600;color:var(--success)">Bs {{ p.monto }}</td>
+            </tr>
+            {% empty %}
+            <tr class="table-empty-row"><td colspan="4" class="text-center text-secondary py-3">Sin pagos registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

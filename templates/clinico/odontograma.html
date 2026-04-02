@@ -1,0 +1,800 @@
+{% extends "base/base.html" %}
+{% load dental_tags %}
+{% block title %}Odontograma – {{ paciente }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'pacientes:lista' %}" class="text-decoration-none text-secondary">Pacientes</a>
+  / <a href="{% url 'pacientes:detalle' paciente.pk %}" class="text-decoration-none text-secondary">{{ paciente }}</a>
+  / Odontograma
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Diente ──────────────────────────────────────────────────────────────── */
+.tooth-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s, transform .12s;
+  padding: 1px;
+  border-radius: 8px;
+}
+.tooth-wrap:hover { filter: brightness(1.3); }
+.tooth-wrap:active { transform: scale(.93); }
+.tooth-wrap.selected {
+  filter: drop-shadow(0 0 6px #4e9ff5) brightness(1.25);
+  outline: 1.5px solid #4e9ff5;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.tooth-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 8.5px;
+  color: #555a6e;
+  line-height: 1;
+  margin: 2px 0;
+}
+.tooth-svg { display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.55)); }
+
+/* ── Odontograma layout ──────────────────────────────────────────────────── */
+.odonto-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 0;
+}
+.odonto-separator {
+  width: 2px;
+  background: rgba(255,255,255,.07);
+  border-radius: 1px;
+  margin: 0 5px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+.odonto-centerline {
+  height: 1px;
+  background: rgba(255,255,255,.08);
+  margin: 1px 8px;
+}
+.odonto-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.odonto-scroll::-webkit-scrollbar { height: 4px; }
+.odonto-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Face selector ───────────────────────────────────────────────────────── */
+.face-sel-wrap {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.face-sel-svg { display: block; flex-shrink: 0; cursor: pointer; }
+
+/* ── Condition buttons ───────────────────────────────────────────────────── */
+.cond-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: .35rem;
+}
+.cond-btn {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .5rem;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  font-size: .7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .12s;
+  background: var(--bg-base);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.cond-btn:hover { filter: brightness(1.2); }
+.cond-btn.active { color: #fff !important; }
+.cond-dot { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── Legend ──────────────────────────────────────────────────────────────── */
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .7rem;
+  color: var(--text-2);
+  padding: .18rem .5rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#panelDiente { transition: opacity .2s, transform .2s; }
+#panelDiente.hidden { opacity: 0; pointer-events: none; transform: translateY(8px); }
+
+/* ── Quadrant labels ─────────────────────────────────────────────────────── */
+.quad-label {
+  font-size: .6rem;
+  color: #4a4f60;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  text-align: center;
+  flex: 1;
+}
+
+@media (max-width: 576px) {
+  .cond-grid { grid-template-columns: repeat(3, 1fr); }
+  .cond-btn { font-size: .65rem; padding: .25rem .35rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="fa-solid fa-tooth me-2" style="color:var(--accent)"></i>Odontograma
+    </h4>
+    <p class="mb-0" style="font-size:.82rem;color:var(--text-2)">
+      {{ paciente.apellidos }} {{ paciente.nombres }}
+      <span style="color:var(--text-3);margin-left:.3rem">· Notación FDI</span>
+    </p>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <button id="btnGuardar" class="btn btn-primary btn-sm px-3">
+      <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+    </button>
+    <a href="{% url 'pacientes:detalle' paciente.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Diagrama ── -->
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-body p-2 p-sm-3">
+
+        <!-- Quadrant labels top -->
+        <div class="d-flex mb-1 px-1">
+          <div class="quad-label">Superior Derecho</div>
+          <div style="width:16px;flex-shrink:0"></div>
+          <div class="quad-label">Superior Izquierdo</div>
+        </div>
+
+        <div class="odonto-scroll">
+          <div style="min-width:540px;padding:0 4px">
+            <div class="odonto-row" id="fila-superior"></div>
+            <div class="odonto-centerline"></div>
+            <div class="odonto-row" id="fila-inferior"></div>
+          </div>
+        </div>
+
+        <!-- Quadrant labels bottom -->
+        <div class="d-flex mt-1 px-1">
+          <div class="quad-label">Inferior Derecho</div>
+          <div style="width:16px;flex-shrink:0"></div>
+          <div class="quad-label">Inferior Izquierdo</div>
+        </div>
+
+        <!-- Click hint -->
+        <div class="text-center mt-2" style="font-size:.7rem;color:var(--text-3)">
+          <i class="fa-regular fa-hand-pointer me-1"></i>Toca o haz clic en un diente para editarlo
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="card mt-3">
+      <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2" id="leyendaContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel edición ── -->
+  <div class="col-12 col-lg-4">
+
+    <!-- Empty state -->
+    <div id="panelVacio" class="card" style="border-style:dashed;border-color:var(--border)">
+      <div class="card-body text-center py-4">
+        <i class="fa-solid fa-tooth fa-2x mb-2" style="color:var(--text-3);opacity:.3"></i>
+        <div style="font-size:.82rem;color:var(--text-3)">Selecciona un diente para editarlo</div>
+      </div>
+    </div>
+
+    <!-- Edit panel -->
+    <div id="panelDiente" class="hidden">
+      <div class="card mb-3">
+        <div class="card-body">
+
+          <!-- Tooth header -->
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:38px;height:38px;border-radius:10px;
+                        background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="fa-solid fa-tooth" style="color:#fff;font-size:.95rem"></i>
+            </div>
+            <div>
+              <div style="font-weight:800;font-size:1.05rem">Diente <span id="lblDiente"></span></div>
+              <div style="font-size:.73rem;color:var(--text-3)" id="lblDienteNombre"></div>
+            </div>
+          </div>
+
+          <!-- Face selector -->
+          <div class="mb-3">
+            <div style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:.5rem">
+              Cara afectada
+            </div>
+            <div class="face-sel-wrap">
+              <svg id="faceSelectorSvg" class="face-sel-svg" viewBox="0 0 100 100" width="88" height="88"></svg>
+              <div style="font-size:.72rem;color:var(--text-2)">
+                <div id="caraLabel" style="font-weight:700;color:var(--accent);margin-bottom:.5rem">General</div>
+                <button id="btnCaraGeneral" class="btn btn-sm py-1" style="font-size:.7rem;padding:.2rem .5rem">
+                  <i class="fa-solid fa-maximize me-1"></i>General
+                </button>
+                <div style="margin-top:.4rem;font-size:.68rem;color:var(--text-3)">
+                  Toca una cara<br>del diagrama
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Condition grid -->
+          <div class="mb-3">
+            <div style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:.5rem">
+              Condición
+            </div>
+            <div class="cond-grid" id="condBtns"></div>
+          </div>
+
+          <!-- Notes -->
+          <div class="mb-3">
+            <label style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;font-weight:700">
+              Observaciones
+            </label>
+            <textarea id="txtNotas" class="form-control mt-1" rows="2"
+                      placeholder="Notas adicionales sobre este diente…"
+                      style="font-size:.82rem;resize:vertical"></textarea>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2">
+            <button id="btnAplicar" class="btn btn-primary btn-sm flex-fill">
+              <i class="fa-solid fa-check me-1"></i>Aplicar
+            </button>
+            <button id="btnLimpiar" class="btn btn-outline-secondary btn-sm" title="Limpiar diente (quitar condiciones)">
+              <i class="fa-solid fa-eraser me-1"></i>Limpiar
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- History -->
+      {% if odontogramas %}
+      <div class="card">
+        <div style="padding:.6rem 1rem;font-size:.68rem;color:var(--text-3);font-weight:700;
+                    text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">
+          <i class="fa-solid fa-clock-rotate-left me-1"></i>Historial de registros
+        </div>
+        {% for og in odontogramas %}
+        <div style="padding:.5rem 1rem;border-bottom:1px solid var(--border);font-size:.8rem">
+          <div class="d-flex justify-content-between align-items-start">
+            <span class="fw-semibold">{{ og.fecha|date:"d/m/Y" }}</span>
+            <span style="color:var(--text-3);font-size:.7rem">{{ og.creado_por.get_full_name|default:og.creado_por }}</span>
+          </div>
+          {% if og.notas %}
+          <div style="color:var(--text-2);font-size:.73rem;margin-top:.1rem">{{ og.notas }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div><!-- /panelDiente -->
+  </div>
+
+</div><!-- /row -->
+
+<!-- General notes -->
+<div class="card mt-3">
+  <div class="card-body">
+    <label class="form-label" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3)">
+      <i class="fa-solid fa-note-sticky me-1"></i>Notas del odontograma
+    </label>
+    <textarea id="txtNotasGenerales" class="form-control" rows="2"
+              placeholder="Observaciones generales del odontograma…"
+              style="font-size:.85rem">{% if odontograma_actual %}{{ odontograma_actual.notas }}{% endif %}</textarea>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ODONTOGRAMA — estado, constantes, utilidades
+═══════════════════════════════════════════════════════════════════════════ */
+
+const ESTADOS = {
+  sano:       { label:'Sano',          fill:'#1a1e28', stroke:'#2e3347', text:'#4a4f60' },
+  caries:     { label:'Caries',        fill:'#7f1d1d', stroke:'#f87171', text:'#f87171' },
+  obturado:   { label:'Obturado',      fill:'#064e3b', stroke:'#34d399', text:'#34d399' },
+  extraido:   { label:'Extraído',      fill:'#1f2937', stroke:'#6b7280', text:'#6b7280' },
+  corona:     { label:'Corona',        fill:'#78350f', stroke:'#fbbf24', text:'#fbbf24' },
+  endodoncia: { label:'Endodoncia',    fill:'#4c1d95', stroke:'#a78bfa', text:'#a78bfa' },
+  implante:   { label:'Implante',      fill:'#1e3a5f', stroke:'#4e9ff5', text:'#4e9ff5' },
+  fractura:   { label:'Fractura',      fill:'#7c2d12', stroke:'#fb923c', text:'#fb923c' },
+  puente:     { label:'Puente',        fill:'#134e4a', stroke:'#2dd4bf', text:'#2dd4bf' },
+  ausente:    { label:'Ausente',       fill:'#111827', stroke:'#374151', text:'#374151' },
+  erupcion:   { label:'En erupción',   fill:'#701a75', stroke:'#e879f9', text:'#e879f9' },
+};
+
+/* Notación FDI */
+const FILA_SUPERIOR = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28'];
+const FILA_INFERIOR = ['48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+
+const NOMBRE_DIENTE = {
+  '11':'Inc. Central','12':'Inc. Lateral','13':'Canino','14':'1er Premolar','15':'2do Premolar',
+  '16':'1er Molar','17':'2do Molar','18':'3er Molar (juicio)',
+  '21':'Inc. Central','22':'Inc. Lateral','23':'Canino','24':'1er Premolar','25':'2do Premolar',
+  '26':'1er Molar','27':'2do Molar','28':'3er Molar (juicio)',
+  '31':'Inc. Central','32':'Inc. Lateral','33':'Canino','34':'1er Premolar','35':'2do Premolar',
+  '36':'1er Molar','37':'2do Molar','38':'3er Molar (juicio)',
+  '41':'Inc. Central','42':'Inc. Lateral','43':'Canino','44':'1er Premolar','45':'2do Premolar',
+  '46':'1er Molar','47':'2do Molar','48':'3er Molar (juicio)',
+};
+
+/* Caras dentales (5 superficies) — coordenadas para SVG 44×44 */
+const TOOTH_PATHS = {
+  vestibular: 'M2,2 L42,2 L32,12 L12,12 Z',
+  mesial:     'M2,2 L12,12 L12,32 L2,42 Z',
+  oclusal:    'M12,12 L32,12 L32,32 L12,32 Z',
+  distal:     'M42,2 L42,42 L32,32 L32,12 Z',
+  lingual:    'M2,42 L42,42 L32,32 L12,32 Z',
+};
+/* Mismas caras escaladas a 100×100 para el panel selector */
+const PANEL_PATHS = {
+  vestibular: 'M5,5 L95,5 L73,27 L27,27 Z',
+  mesial:     'M5,5 L27,27 L27,73 L5,95 Z',
+  oclusal:    'M27,27 L73,27 L73,73 L27,73 Z',
+  distal:     'M95,5 L95,95 L73,73 L73,27 Z',
+  lingual:    'M5,95 L95,95 L73,73 L27,73 Z',
+};
+const PANEL_LABEL_POS = {
+  vestibular:[50,18], mesial:[14,51], oclusal:[50,53], distal:[86,51], lingual:[50,84]
+};
+const PANEL_LABEL_TEXT = {
+  vestibular:'Vest.', mesial:'Mes.', oclusal:'Ocl.', distal:'Dis.', lingual:'Ling.'
+};
+
+/* ─── Estado global ─────────────────────────────────────────────────────── */
+let estadosDientes = {{ estados_json|safe }};
+let dienteSeleccionado  = null;
+let caraSeleccionada    = 'general';
+let condicionSeleccionada = 'caries';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════════════════════════════════════ */
+
+function getFaceState(num, face) {
+  const sp = estadosDientes[`${num}_${face}`];
+  if (sp) return sp.condicion || 'sano';
+  const gen = estadosDientes[`${num}_general`];
+  if (gen) return gen.condicion || 'sano';
+  return 'sano';
+}
+
+function isExtraido(num) {
+  const g = estadosDientes[`${num}_general`];
+  return g && (g.condicion === 'extraido' || g.condicion === 'ausente');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONSTRUCCIÓN DEL DIENTE (SVG)
+═══════════════════════════════════════════════════════════════════════════ */
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function mkEl(tag, attrs) {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function buildToothSVG(num) {
+  const svg = mkEl('svg', { viewBox:'0 0 44 44', width:'33', height:'33' });
+  svg.classList.add('tooth-svg');
+
+  /* Definición de gradiente 3D (highlight en esquina) */
+  const defs = mkEl('defs', {});
+  const gid = `tg_${num}`;
+  const grad = mkEl('linearGradient', { id:gid, x1:'0%', y1:'0%', x2:'60%', y2:'60%' });
+  grad.appendChild(mkEl('stop', { offset:'0%',   'stop-color':'rgba(255,255,255,0.08)' }));
+  grad.appendChild(mkEl('stop', { offset:'100%', 'stop-color':'rgba(255,255,255,0)' }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  /* Base / contorno del diente */
+  svg.appendChild(mkEl('rect', {
+    x:'0.5', y:'0.5', width:'43', height:'43', rx:'8',
+    fill:'#181c28', stroke:'#2a2f3d', 'stroke-width':'1'
+  }));
+
+  /* Extraído/Ausente: mostramos fondo oscuro con "X" */
+  if (isExtraido(num)) {
+    const st = ESTADOS[estadosDientes[`${num}_general`].condicion];
+    svg.appendChild(mkEl('rect', {
+      x:'1', y:'1', width:'42', height:'42', rx:'7',
+      fill: st.fill, stroke: st.stroke, 'stroke-width':'1'
+    }));
+    const xProps = { stroke: st.stroke, 'stroke-width':'3', 'stroke-linecap':'round' };
+    svg.appendChild(mkEl('line', { x1:'12',y1:'12',x2:'32',y2:'32', ...xProps }));
+    svg.appendChild(mkEl('line', { x1:'32',y1:'12',x2:'12',y2:'32', ...xProps }));
+    return svg;
+  }
+
+  /* 5 caras dentales */
+  for (const [face, path] of Object.entries(TOOTH_PATHS)) {
+    const cond  = getFaceState(num, face);
+    const est   = ESTADOS[cond] || ESTADOS.sano;
+    const isSano = cond === 'sano';
+    const p = mkEl('path', {
+      d: path,
+      fill: isSano ? '#1e2230' : est.fill,
+      stroke: isSano ? '#2a2f3d' : est.stroke,
+      'stroke-width': isSano ? '0.4' : '0.7',
+    });
+    svg.appendChild(p);
+  }
+
+  /* Overlay de brillo 3D (parte superior izquierda) */
+  svg.appendChild(mkEl('ellipse', {
+    cx:'14', cy:'10', rx:'9', ry:'6',
+    fill:`url(#${gid})`, style:'pointer-events:none'
+  }));
+
+  /* Sombra interna oclusal */
+  svg.appendChild(mkEl('rect', {
+    x:'12', y:'12', width:'20', height:'20',
+    fill:'rgba(0,0,0,.12)', style:'pointer-events:none'
+  }));
+
+  return svg;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RENDER FILAS
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderFila(nums, containerId, isUpper) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+
+  nums.forEach((num, idx) => {
+    if (idx === 8) {
+      const sep = document.createElement('div');
+      sep.className = 'odonto-separator';
+      el.appendChild(sep);
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tooth-wrap';
+    if (dienteSeleccionado === num) wrap.classList.add('selected');
+    wrap.dataset.diente = num;
+    wrap.setAttribute('role', 'button');
+    wrap.setAttribute('tabindex', '0');
+    wrap.setAttribute('aria-label', `Diente ${num}`);
+    wrap.title = `${num} – ${NOMBRE_DIENTE[num] || ''}`;
+
+    const numEl = document.createElement('div');
+    numEl.className = 'tooth-num';
+    numEl.textContent = num;
+
+    const svg = buildToothSVG(num);
+
+    if (isUpper) { wrap.appendChild(numEl); wrap.appendChild(svg); }
+    else         { wrap.appendChild(svg);   wrap.appendChild(numEl); }
+
+    wrap.addEventListener('click', () => selectTooth(num, wrap));
+    wrap.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectTooth(num, wrap); }
+    });
+
+    el.appendChild(wrap);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FACE SELECTOR (panel)
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderFaceSelector() {
+  const svg = document.getElementById('faceSelectorSvg');
+  svg.innerHTML = '';
+
+  /* Background */
+  svg.appendChild(mkEl('rect', { width:'100', height:'100', rx:'12', fill:'#181c28', stroke:'#2a2f3d', 'stroke-width':'1' }));
+
+  for (const [face, path] of Object.entries(PANEL_PATHS)) {
+    const isActive = face === caraSeleccionada;
+    const p = mkEl('path', {
+      d: path,
+      fill: isActive ? 'rgba(78,159,245,.30)' : 'rgba(255,255,255,.04)',
+      stroke: isActive ? '#4e9ff5' : '#2d3244',
+      'stroke-width': isActive ? '1.5' : '0.75',
+      style: 'cursor:pointer',
+    });
+    p.addEventListener('click', () => {
+      caraSeleccionada = face;
+      renderFaceSelector();
+      updateCaraLabel();
+      // Load existing state for this face
+      loadFaceState();
+    });
+    svg.appendChild(p);
+
+    /* Label */
+    const [lx, ly] = PANEL_LABEL_POS[face];
+    const t = mkEl('text', {
+      x: lx, y: ly,
+      'text-anchor': 'middle',
+      fill: isActive ? '#4e9ff5' : '#555a6e',
+      'font-size': '9',
+      'font-family': 'system-ui, sans-serif',
+      'font-weight': isActive ? '700' : '400',
+      style: 'pointer-events:none',
+    });
+    t.textContent = PANEL_LABEL_TEXT[face];
+    svg.appendChild(t);
+  }
+
+  /* "General" button state */
+  const btnGen = document.getElementById('btnCaraGeneral');
+  if (caraSeleccionada === 'general') {
+    btnGen.classList.add('btn-primary');
+    btnGen.classList.remove('btn-outline-secondary');
+  } else {
+    btnGen.classList.remove('btn-primary');
+    btnGen.classList.add('btn-outline-secondary');
+  }
+}
+
+function updateCaraLabel() {
+  const labels = { general:'General', ...Object.fromEntries(Object.entries(PANEL_LABEL_TEXT)) };
+  const CARA_FULL = { vestibular:'Vestibular', mesial:'Mesial', oclusal:'Oclusal', distal:'Distal', lingual:'Lingual/Palatino', general:'General' };
+  document.getElementById('caraLabel').textContent = CARA_FULL[caraSeleccionada] || caraSeleccionada;
+}
+
+function loadFaceState() {
+  if (!dienteSeleccionado) return;
+  const key = caraSeleccionada === 'general'
+    ? `${dienteSeleccionado}_general`
+    : `${dienteSeleccionado}_${caraSeleccionada}`;
+  const st = estadosDientes[key];
+  if (st) {
+    condicionSeleccionada = st.condicion || 'caries';
+    document.getElementById('txtNotas').value = st.notas || '';
+  }
+  renderCondButtons();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONDITION BUTTONS
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderCondButtons() {
+  const container = document.getElementById('condBtns');
+  container.innerHTML = '';
+  for (const [key, est] of Object.entries(ESTADOS)) {
+    const btn = document.createElement('button');
+    btn.className = 'cond-btn' + (key === condicionSeleccionada ? ' active' : '');
+    btn.style.borderColor = key === condicionSeleccionada ? est.stroke : 'transparent';
+    if (key === condicionSeleccionada) {
+      btn.style.background = est.fill;
+      btn.style.color = '#fff';
+    }
+    btn.innerHTML = `<span class="cond-dot" style="background:${est.stroke}"></span>${est.label}`;
+    btn.addEventListener('click', () => {
+      condicionSeleccionada = key;
+      renderCondButtons();
+    });
+    container.appendChild(btn);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SELECCIONAR DIENTE
+═══════════════════════════════════════════════════════════════════════════ */
+
+function selectTooth(num, wrapEl) {
+  /* Deselect previous */
+  document.querySelectorAll('.tooth-wrap.selected').forEach(w => w.classList.remove('selected'));
+
+  dienteSeleccionado = num;
+  wrapEl.classList.add('selected');
+
+  document.getElementById('lblDiente').textContent = `#${num}`;
+  document.getElementById('lblDienteNombre').textContent = NOMBRE_DIENTE[num] || '';
+
+  /* Default cara = general, load its state */
+  caraSeleccionada = 'general';
+  const gen = estadosDientes[`${num}_general`];
+  if (gen) {
+    condicionSeleccionada = gen.condicion || 'caries';
+    document.getElementById('txtNotas').value = gen.notas || '';
+  } else {
+    condicionSeleccionada = 'caries';
+    document.getElementById('txtNotas').value = '';
+  }
+
+  /* Show panel */
+  document.getElementById('panelVacio').style.display = 'none';
+  const panel = document.getElementById('panelDiente');
+  panel.classList.remove('hidden');
+
+  renderFaceSelector();
+  updateCaraLabel();
+  renderCondButtons();
+
+  /* Scroll panel into view on mobile */
+  if (window.innerWidth < 992) {
+    setTimeout(() => panel.scrollIntoView({ behavior:'smooth', block:'nearest' }), 50);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   APLICAR / LIMPIAR
+═══════════════════════════════════════════════════════════════════════════ */
+
+document.getElementById('btnAplicar').addEventListener('click', () => {
+  if (!dienteSeleccionado) return;
+  const notas = document.getElementById('txtNotas').value;
+  const color = ESTADOS[condicionSeleccionada]?.stroke || '#22d3ee';
+
+  if (caraSeleccionada === 'general') {
+    /* Aplicar general: borrar estados individuales */
+    estadosDientes[`${dienteSeleccionado}_general`] = { condicion:condicionSeleccionada, notas, color };
+    for (const c of Object.keys(TOOTH_PATHS)) {
+      delete estadosDientes[`${dienteSeleccionado}_${c}`];
+    }
+  } else {
+    estadosDientes[`${dienteSeleccionado}_${caraSeleccionada}`] = { condicion:condicionSeleccionada, notas, color };
+    /* Si existía un estado general, lo quitamos para que no sobreescriba */
+    delete estadosDientes[`${dienteSeleccionado}_general`];
+  }
+
+  /* Re-render filas y mantener selección */
+  renderFila(FILA_SUPERIOR, 'fila-superior', true);
+  renderFila(FILA_INFERIOR, 'fila-inferior', false);
+  const newWrap = document.querySelector(`.tooth-wrap[data-diente="${dienteSeleccionado}"]`);
+  if (newWrap) newWrap.classList.add('selected');
+
+  /* Flash visual en botón */
+  const btn = document.getElementById('btnAplicar');
+  btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Aplicado';
+  btn.classList.replace('btn-primary','btn-success');
+  setTimeout(() => {
+    btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Aplicar';
+    btn.classList.replace('btn-success','btn-primary');
+  }, 900);
+});
+
+document.getElementById('btnLimpiar').addEventListener('click', () => {
+  if (!dienteSeleccionado) return;
+  delete estadosDientes[`${dienteSeleccionado}_general`];
+  for (const c of Object.keys(TOOTH_PATHS)) {
+    delete estadosDientes[`${dienteSeleccionado}_${c}`];
+  }
+  condicionSeleccionada = 'caries';
+  document.getElementById('txtNotas').value = '';
+  renderCondButtons();
+  renderFila(FILA_SUPERIOR, 'fila-superior', true);
+  renderFila(FILA_INFERIOR, 'fila-inferior', false);
+  const newWrap = document.querySelector(`.tooth-wrap[data-diente="${dienteSeleccionado}"]`);
+  if (newWrap) newWrap.classList.add('selected');
+});
+
+/* "General" button in panel */
+document.getElementById('btnCaraGeneral').addEventListener('click', () => {
+  caraSeleccionada = 'general';
+  renderFaceSelector();
+  updateCaraLabel();
+  loadFaceState();
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GUARDAR
+═══════════════════════════════════════════════════════════════════════════ */
+
+document.getElementById('btnGuardar').addEventListener('click', async () => {
+  const notas = document.getElementById('txtNotasGenerales').value;
+  const estadosArr = Object.entries(estadosDientes)
+    .filter(([, v]) => v.condicion && v.condicion !== 'sano')
+    .map(([key, val]) => {
+      const parts = key.split('_');
+      const cara  = parts.slice(1).join('_');
+      return { diente: parseInt(parts[0]), cara, ...val };
+    });
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Guardando…';
+
+  try {
+    const resp = await fetch('{% url "clinico:guardar_odontograma" paciente.pk %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ estados: estadosArr, notas })
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    if (data.success) {
+      btn.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i>Guardado';
+      btn.classList.replace('btn-primary','btn-success');
+      btn.disabled = false;
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Guardar';
+        btn.classList.replace('btn-success','btn-primary');
+      }, 2500);
+    } else {
+      throw new Error('Error en respuesta');
+    }
+  } catch (err) {
+    console.error('Guardar odontograma:', err);
+    btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Error al guardar';
+    btn.classList.replace('btn-primary','btn-danger');
+    btn.disabled = false;
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Guardar';
+      btn.classList.replace('btn-danger','btn-primary');
+    }, 3000);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEYENDA
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderLeyenda() {
+  const c = document.getElementById('leyendaContainer');
+  c.innerHTML = '';
+  for (const [key, est] of Object.entries(ESTADOS)) {
+    if (key === 'sano') continue;
+    const chip = document.createElement('div');
+    chip.className = 'legend-chip';
+    chip.innerHTML = `<span class="legend-dot" style="background:${est.stroke}"></span>${est.label}`;
+    c.appendChild(chip);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════════════ */
+
+renderFila(FILA_SUPERIOR, 'fila-superior', true);
+renderFila(FILA_INFERIOR, 'fila-inferior', false);
+renderLeyenda();
+</script>
+{% endblock %}

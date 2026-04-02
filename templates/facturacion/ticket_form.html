@@ -1,0 +1,396 @@
+{% extends "base/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'agenda:calendario' %}" class="text-decoration-none text-secondary">Agenda</a> /
+  {{ titulo }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+#buscador-wrap { position: relative; }
+#buscador-dropdown {
+  position: absolute; z-index: 1050; width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  max-height: 280px; overflow-y: auto;
+  display: none;
+}
+.drop-item {
+  padding: .5rem .85rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  font-size: .83rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.drop-item:last-child { border-bottom: none; }
+.drop-item:hover { background: var(--bg-hover); }
+.badge-servicio { background:#a78bfa22;color:#a78bfa;font-size:.68rem;padding:.18em .5em;border-radius:4px;font-weight:700;text-transform:uppercase; }
+.badge-producto  { background:#34d39922;color:#34d399;font-size:.68rem;padding:.18em .5em;border-radius:4px;font-weight:700;text-transform:uppercase; }
+#tabla-items td { vertical-align: middle; }
+#tabla-items input[type=number] { background:var(--bg-card);border-color:var(--border);color:var(--text-1); }
+.subtotal-cell { font-weight:600;color:var(--accent); }
+#totales-panel { background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem; }
+.total-line { display:flex;justify-content:space-between;align-items:center;padding:.3rem 0; }
+.total-final { font-size:1.4rem;font-weight:700;color:var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate id="ticketForm">
+{% csrf_token %}
+<input type="hidden" name="items_json" id="items_json" value="{{ items_iniciales_json }}">
+
+<div class="row g-3">
+
+  <!-- ── Columna izquierda: paciente + buscador + tabla ── -->
+  <div class="col-12 col-lg-8">
+
+    <!-- Paciente -->
+    <div class="card mb-3">
+      <div class="card-body py-2 d-flex align-items-center gap-3">
+        <i class="fa-solid fa-user-circle fa-2x" style="color:var(--accent)"></i>
+        <div class="flex-grow-1">
+          <div class="fw-bold">{{ paciente }}</div>
+          <div style="font-size:.78rem;color:var(--text-2)">
+            {% if paciente.telefono %}<i class="fa-solid fa-phone me-1"></i>{{ paciente.telefono }}{% endif %}
+            &nbsp;·&nbsp;
+            Cita: {{ cita.fecha }} {{ cita.hora_inicio|time:"H:i" }}
+            {% if cita.doctor %} · Dr. {{ cita.doctor.get_full_name|default:cita.doctor.username }}{% endif %}
+          </div>
+        </div>
+        {% if deuda > 0 %}
+        <span class="badge rounded-pill" style="background:#f8712230;color:#f87171;font-size:.78rem">
+          <i class="fa-solid fa-triangle-exclamation me-1"></i>Deuda Bs {{ deuda }}
+        </span>
+        {% else %}
+        <span class="badge rounded-pill" style="background:#34d39920;color:#34d399;font-size:.78rem">
+          <i class="fa-solid fa-circle-check me-1"></i>Sin deuda
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Buscador de ítems -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="fa-solid fa-magnifying-glass me-2"></i>Agregar servicio o producto
+      </div>
+      <div class="card-body pb-2">
+        <div id="buscador-wrap">
+          <div class="input-group">
+            <span class="input-group-text" style="background:var(--bg-surface);border-color:var(--border)">
+              <i class="fa-solid fa-search" style="color:var(--text-2)"></i>
+            </span>
+            <input type="text" id="buscador" class="form-control"
+                   placeholder="Buscar tratamiento o producto del inventario…"
+                   autocomplete="off">
+          </div>
+          <div id="buscador-dropdown"></div>
+        </div>
+
+        <!-- Acceso rápido: servicios -->
+        <div class="mt-3">
+          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);font-weight:700;margin-bottom:.4rem">
+            Servicios disponibles
+          </div>
+          <div class="d-flex flex-wrap gap-1">
+            {% for s in servicios %}
+            <button type="button" class="btn btn-sm"
+                    style="background:var(--bg-surface);border:1px solid var(--border);font-size:.76rem;color:var(--text-1)"
+                    onclick="agregarItem('servicio',{{ s.pk }},'{{ s.nombre|escapejs }}',{{ s.precio }})">
+              <i class="fa-solid fa-plus me-1" style="color:var(--accent)"></i>{{ s.nombre }}
+              <span style="color:var(--text-3)">Bs {{ s.precio }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if productos %}
+        <div class="mt-3">
+          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);font-weight:700;margin-bottom:.4rem">
+            Productos en venta
+          </div>
+          <div class="d-flex flex-wrap gap-1">
+            {% for p in productos %}
+            <button type="button" class="btn btn-sm"
+                    style="background:var(--bg-surface);border:1px solid var(--border);font-size:.76rem;color:var(--text-1)"
+                    onclick="agregarItem('producto',{{ p.pk }},'{{ p.nombre|escapejs }}',{{ p.precio_unitario }})">
+              <i class="fa-solid fa-plus me-1" style="color:#34d399"></i>{{ p.nombre }}
+              <span style="color:var(--text-3)">Bs {{ p.precio_unitario }}</span>
+              <span class="badge" style="background:#34d39920;color:#34d399;font-size:.65rem">{{ p.stock_actual }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Tabla de ítems -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list fa-fw me-2"></i>Ítems del ticket</span>
+        <span id="items-count" class="badge" style="background:var(--accent);font-size:.75rem">0</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 table-mobile" id="tabla-items">
+            <thead style="font-size:.75rem;text-transform:uppercase;color:var(--text-2);background:var(--bg-surface)">
+              <tr>
+                <th class="ps-3">#</th>
+                <th>Descripción</th>
+                <th>Cant.</th>
+                <th>Precio Bs</th>
+                <th>Desc.%</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-items">
+              <tr id="fila-vacia">
+                <td colspan="7" class="text-center py-4" style="color:var(--text-3);font-size:.85rem">
+                  <i class="fa-solid fa-receipt fa-2x mb-2 d-block" style="opacity:.3"></i>
+                  Sin ítems — agrega un servicio o producto
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col-lg-8 -->
+
+  <!-- ── Columna derecha: totales + pago ── -->
+  <div class="col-12 col-lg-4">
+
+    <div class="card mb-3 sticky-top" style="top:1rem">
+      <div class="card-header">
+        <i class="fa-solid fa-calculator fa-fw me-2"></i>Resumen y pago
+      </div>
+      <div class="card-body">
+
+        <div id="totales-panel" class="mb-3">
+          <div class="total-line" style="font-size:.85rem;color:var(--text-2)">
+            <span>Subtotal</span>
+            <span id="disp-subtotal">Bs 0.00</span>
+          </div>
+          <div class="total-line align-items-start" style="font-size:.85rem;color:var(--text-2)">
+            <span>Descuento global (%)</span>
+            <div style="width:90px">
+              <input type="number" name="descuento_global" id="descuento_global"
+                     class="form-control form-control-sm text-end"
+                     value="0" min="0" max="100" step="0.01">
+            </div>
+          </div>
+          <div class="total-line" style="font-size:.85rem;color:#f87171">
+            <span>— Descuento</span>
+            <span id="disp-descuento">Bs 0.00</span>
+          </div>
+          <hr style="border-color:var(--border);margin:.4rem 0">
+          <div class="total-line">
+            <span class="fw-bold">TOTAL</span>
+            <span id="disp-total" class="total-final">Bs 0.00</span>
+          </div>
+        </div>
+
+        <!-- Método de pago -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.85rem">
+            Método de pago <span class="text-danger">*</span>
+          </label>
+          <select name="metodo_pago" id="metodo_pago" class="form-select form-select-sm">
+            <option value="">— Seleccionar —</option>
+            {% for m in metodos %}
+            <option value="{{ m.pk }}">{{ m.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Notas -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.85rem">Notas</label>
+          <textarea name="notas" class="form-control form-control-sm" rows="2"
+                    placeholder="Observaciones del cobro…"></textarea>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-success" id="btnRegistrar">
+            <i class="fa-solid fa-receipt me-1"></i>Registrar ticket
+          </button>
+          <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /col-lg-4 -->
+
+</div><!-- /row -->
+</form>
+
+<script>
+// ── Estado ──────────────────────────────────────────────────────────────────
+let items = {{ items_iniciales_json|safe }};
+
+const BUSCAR_URL = "{% url 'facturacion:buscar_items_ticket' %}";
+const CSRF       = "{{ csrf_token }}";
+
+// ── Render tabla ─────────────────────────────────────────────────────────────
+function renderTabla() {
+  const tbody = document.getElementById('tbody-items');
+  const count = document.getElementById('items-count');
+  count.textContent = items.length;
+
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr id="fila-vacia">
+      <td colspan="7" class="text-center py-4" style="color:var(--text-3);font-size:.85rem">
+        <i class="fa-solid fa-receipt fa-2x mb-2 d-block" style="opacity:.3"></i>
+        Sin ítems — agrega un servicio o producto
+      </td></tr>`;
+    calcTotales();
+    return;
+  }
+
+  tbody.innerHTML = items.map((it, i) => {
+    const sub = calcSub(it);
+    const badge = it.tipo === 'servicio'
+      ? '<span class="badge-servicio">Servicio</span>'
+      : '<span class="badge-producto">Producto</span>';
+    return `<tr>
+      <td class="ps-3 text-secondary" style="font-size:.75rem">${i+1} ${badge}</td>
+      <td style="font-size:.82rem;max-width:160px;word-break:break-word">${esc(it.descripcion)}</td>
+      <td>
+        <input type="number" class="form-control form-control-sm"
+               style="width:70px" min="0.1" step="0.1" value="${it.cantidad}"
+               onchange="editItem(${i},'cantidad',this.value)">
+      </td>
+      <td>
+        <input type="number" class="form-control form-control-sm"
+               style="width:90px" min="0" step="0.01" value="${it.precio_unitario}"
+               onchange="editItem(${i},'precio_unitario',this.value)">
+      </td>
+      <td>
+        <input type="number" class="form-control form-control-sm"
+               style="width:70px" min="0" max="100" step="0.01" value="${it.descuento}"
+               onchange="editItem(${i},'descuento',this.value)">
+      </td>
+      <td class="subtotal-cell">Bs ${sub.toFixed(2)}</td>
+      <td>
+        <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                onclick="quitarItem(${i})" title="Quitar">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  calcTotales();
+  syncJSON();
+}
+
+function calcSub(it) {
+  return parseFloat(it.cantidad) * parseFloat(it.precio_unitario) * (1 - parseFloat(it.descuento) / 100);
+}
+
+function calcTotales() {
+  let subtotal = items.reduce((s, it) => s + calcSub(it), 0);
+  const dPct   = parseFloat(document.getElementById('descuento_global').value) || 0;
+  const dMonto = subtotal * dPct / 100;
+  const total  = subtotal - dMonto;
+  document.getElementById('disp-subtotal').textContent  = 'Bs ' + subtotal.toFixed(2);
+  document.getElementById('disp-descuento').textContent = 'Bs ' + dMonto.toFixed(2);
+  document.getElementById('disp-total').textContent     = 'Bs ' + total.toFixed(2);
+}
+
+function syncJSON() {
+  document.getElementById('items_json').value = JSON.stringify(items);
+}
+
+// ── Acciones ─────────────────────────────────────────────────────────────────
+function agregarItem(tipo, ref_id, descripcion, precio) {
+  // Si ya existe el mismo, incrementar cantidad
+  const idx = items.findIndex(it => it.tipo === tipo && it.ref_id === ref_id);
+  if (idx >= 0) {
+    items[idx].cantidad = parseFloat(items[idx].cantidad) + 1;
+  } else {
+    items.push({ tipo, ref_id, descripcion, cantidad: 1, precio_unitario: parseFloat(precio), descuento: 0 });
+  }
+  renderTabla();
+}
+
+function quitarItem(i) {
+  items.splice(i, 1);
+  renderTabla();
+}
+
+function editItem(i, campo, valor) {
+  items[i][campo] = parseFloat(valor) || 0;
+  renderTabla();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Descuento global ─────────────────────────────────────────────────────────
+document.getElementById('descuento_global').addEventListener('input', calcTotales);
+
+// ── Buscador AJAX ────────────────────────────────────────────────────────────
+let timer;
+const buscador  = document.getElementById('buscador');
+const dropdown  = document.getElementById('buscador-dropdown');
+
+buscador.addEventListener('input', () => {
+  clearTimeout(timer);
+  const q = buscador.value.trim();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+  timer = setTimeout(() => {
+    fetch(`${BUSCAR_URL}?q=${encodeURIComponent(q)}`, {
+      headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.results.length) { dropdown.style.display = 'none'; return; }
+      dropdown.innerHTML = data.results.map(r => `
+        <div class="drop-item"
+             onclick="agregarItem('${r.tipo}',${r.ref_id},'${r.descripcion.replace(/'/g,"\\'")}',${r.precio_unitario});dropdown.style.display='none';buscador.value=''">
+          <span class="${r.tipo === 'servicio' ? 'badge-servicio' : 'badge-producto'}">${r.tipo}</span>
+          <span class="flex-grow-1">${esc(r.descripcion)}</span>
+          <span style="color:var(--accent);font-weight:600">Bs ${r.precio_unitario.toFixed(2)}</span>
+          <span style="color:var(--text-3);font-size:.72rem">${r.extra}</span>
+        </div>`).join('');
+      dropdown.style.display = 'block';
+    });
+  }, 300);
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('buscador-wrap').contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// ── Validar antes de enviar ──────────────────────────────────────────────────
+document.getElementById('ticketForm').addEventListener('submit', function(e) {
+  syncJSON();
+  if (items.length === 0) {
+    e.preventDefault();
+    alert('Agrega al menos un ítem al ticket.');
+    return;
+  }
+  if (!document.getElementById('metodo_pago').value) {
+    e.preventDefault();
+    alert('Selecciona un método de pago.');
+    return;
+  }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+renderTabla();
+</script>
+{% endblock %}

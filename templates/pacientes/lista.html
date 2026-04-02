@@ -1,0 +1,228 @@
+{% extends "base/base.html" %}
+{% block title %}Pacientes{% endblock %}
+{% block breadcrumb %}Pacientes{% endblock %}
+
+{% block extra_css %}
+<style>
+.pac-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: box-shadow .15s, border-color .15s;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.pac-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(45,184,122,.12);
+}
+.pac-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+}
+.pac-avatar-letters {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-weight: 700; font-size: .95rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.estado-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: .2em .65em; border-radius: 20px;
+}
+.info-row {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .78rem; color: var(--text-2);
+  margin-bottom: .25rem;
+}
+.info-row i { width: 14px; text-align: center; flex-shrink: 0; }
+.deuda-pill {
+  font-size: .75rem; font-weight: 700;
+  padding: .2em .6em; border-radius: 20px;
+}
+.pac-actions {
+  margin-top: auto;
+  padding-top: .75rem;
+  display: flex; gap: .4rem;
+  border-top: 1px solid var(--border);
+}
+.stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">Pacientes</h4>
+    <span style="font-size:.8rem;color:var(--text-2)">{{ total }} paciente{{ total|pluralize }}</span>
+  </div>
+  <a href="{% url 'pacientes:crear' %}" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-user-plus me-1"></i>Nuevo paciente
+  </a>
+</div>
+
+<!-- Búsqueda -->
+<form method="get" class="d-flex gap-2 mb-4">
+  <div class="input-group">
+    <span class="input-group-text" style="background:var(--bg-surface);border-color:var(--border)">
+      <i class="fa-solid fa-search" style="color:var(--text-2);font-size:.8rem"></i>
+    </span>
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+           placeholder="Buscar por nombre, apellido, CI o teléfono…">
+    {% if q %}
+    <a href="{% url 'pacientes:lista' %}" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-xmark"></i>
+    </a>
+    {% endif %}
+  </div>
+  <button type="submit" class="btn btn-primary px-4">Buscar</button>
+</form>
+
+{% if enriched %}
+<div class="row g-3">
+  {% for row in enriched %}
+  {% with p=row.p %}
+  <div class="col-12 col-sm-6 col-xl-4">
+    <div class="pac-card">
+
+      <!-- Cabecera: avatar + nombre + estado -->
+      <div class="d-flex align-items-start gap-3 mb-3">
+        {% if p.foto %}
+        <img src="{{ p.foto.url }}" class="pac-avatar" alt="">
+        {% else %}
+        <div class="pac-avatar-letters">{{ p.nombres.0 }}{{ p.apellidos.0 }}</div>
+        {% endif %}
+
+        <div class="flex-grow-1 min-width-0">
+          <div class="fw-bold" style="font-size:.95rem;line-height:1.2">
+            {{ p.apellidos }} {{ p.nombres }}
+          </div>
+          <div style="font-size:.75rem;color:var(--text-2);margin-bottom:.3rem">
+            CI: {{ p.ci|default:"—" }}
+            {% if p.edad %} &nbsp;·&nbsp; {{ p.edad }} años{% endif %}
+          </div>
+          <!-- Estado -->
+          <span class="estado-badge"
+                style="background:{{ row.estado_color }}20;color:{{ row.estado_color }};border:1px solid {{ row.estado_color }}40">
+            <span style="width:6px;height:6px;border-radius:50%;background:{{ row.estado_color }};flex-shrink:0"></span>
+            {{ row.estado_label }}
+          </span>
+        </div>
+
+        <!-- Deuda -->
+        {% if row.deuda > 0 %}
+        <span class="deuda-pill" style="background:#f8712220;color:#f87171;border:1px solid #f8717140;white-space:nowrap">
+          <i class="fa-solid fa-triangle-exclamation me-1" style="font-size:.65rem"></i>Bs {{ row.deuda|floatformat:2 }}
+        </span>
+        {% else %}
+        <span class="deuda-pill" style="background:#34d39920;color:#34d399;border:1px solid #34d39940">
+          <i class="fa-solid fa-circle-check me-1" style="font-size:.65rem"></i>Al día
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Info de contacto -->
+      {% if p.telefono %}
+      <div class="info-row">
+        <i class="fa-solid fa-phone" style="color:var(--accent)"></i>
+        {{ p.telefono }}
+      </div>
+      {% endif %}
+
+      <!-- Próxima cita -->
+      {% if row.proxima %}
+      <div class="info-row">
+        <i class="fa-solid fa-calendar-check" style="color:#34d399"></i>
+        <span>
+          <strong style="color:var(--text-1)">Próxima:</strong>
+          {{ row.proxima.fecha }}
+          {{ row.proxima.hora_inicio|time:"H:i" }}
+          {% if row.proxima.doctor %}
+          · <span style="color:{{ row.proxima.doctor.perfil.color_agenda }}">
+              Dr. {{ row.proxima.doctor.get_full_name|default:row.proxima.doctor.username }}
+            </span>
+          {% endif %}
+        </span>
+      </div>
+      {% if row.proxima.servicio %}
+      <div class="info-row" style="padding-left:18px">
+        <i class="fa-solid fa-tooth" style="color:var(--text-3)"></i>
+        {{ row.proxima.servicio.nombre|truncatechars:40 }}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="info-row" style="color:var(--text-3)">
+        <i class="fa-solid fa-calendar-xmark"></i>
+        Sin citas próximas programadas
+      </div>
+      {% endif %}
+
+      <!-- Último dentista + monto pagado -->
+      {% if row.ultima %}
+      <div class="info-row mt-1">
+        <i class="fa-solid fa-user-doctor" style="color:#a78bfa"></i>
+        <span>
+          <strong style="color:var(--text-1)">Último:</strong>
+          Dr. {{ row.ultima.doctor.get_full_name|default:row.ultima.doctor.username }}
+          · {{ row.ultima.fecha }}
+          {% if row.ultima.servicio %}
+          · {{ row.ultima.servicio.nombre|truncatechars:25 }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if row.total_pagado %}
+      <div class="info-row">
+        <i class="fa-solid fa-money-bill-wave" style="color:#34d399"></i>
+        <span><strong style="color:var(--text-1)">Total pagado:</strong> Bs {{ row.total_pagado|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Acciones -->
+      <div class="pac-actions">
+        <a href="{% url 'pacientes:detalle' p.pk %}" class="btn btn-sm btn-outline-secondary flex-grow-1">
+          <i class="fa-solid fa-eye me-1"></i>Ver
+        </a>
+        <a href="{% url 'pacientes:editar' p.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-pencil"></i>
+        </a>
+        <a href="{% url 'agenda:crear_cita' %}?paciente={{ p.pk }}{% if row.proxima and row.proxima.doctor %}&doctor={{ row.proxima.doctor.pk }}{% elif row.ultima and row.ultima.doctor %}&doctor={{ row.ultima.doctor.pk }}{% endif %}"
+           class="btn btn-sm btn-success"
+           title="Programar próxima cita">
+          <i class="fa-solid fa-calendar-plus me-1"></i>Nueva cita
+        </a>
+      </div>
+
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="text-center py-5" style="color:var(--text-3)">
+  <i class="fa-solid fa-users-slash fa-3x mb-3" style="opacity:.25"></i>
+  <p class="mb-0">No se encontraron pacientes{% if q %} para "<strong>{{ q }}</strong>"{% endif %}</p>
+  {% if q %}
+  <a href="{% url 'pacientes:lista' %}" class="btn btn-sm btn-outline-secondary mt-3">
+    <i class="fa-solid fa-xmark me-1"></i>Limpiar búsqueda
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
