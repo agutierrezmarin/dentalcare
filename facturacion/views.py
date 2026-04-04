@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.http import JsonResponse
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 import json
 
@@ -94,42 +94,74 @@ def crear_plan_pago(request, tratamiento_pk):
 
 @login_required
 def reporte_ingresos(request):
+    from dateutil.relativedelta import relativedelta
     hoy = date.today()
-    inicio_mes = hoy.replace(day=1)
+    inicio_mes  = hoy.replace(day=1)
+    inicio_anio = hoy.replace(month=1, day=1)
 
-    pagos_mes = Pago.objects.filter(fecha__gte=inicio_mes).select_related('paciente', 'metodo_pago')
-    total_mes = pagos_mes.aggregate(t=Sum('monto'))['t'] or 0
+    # ── Pagos del mes ──────────────────────────────
+    pagos_mes   = Pago.objects.filter(fecha__gte=inicio_mes).select_related('paciente', 'metodo_pago', 'doctor')
+    total_mes   = pagos_mes.aggregate(t=Sum('monto'))['t'] or 0
+    total_anio  = Pago.objects.filter(fecha__gte=inicio_anio).aggregate(t=Sum('monto'))['t'] or 0
+    pacientes_mes = pagos_mes.values('paciente').distinct().count()
 
-    por_metodo = Pago.objects.filter(fecha__gte=inicio_mes).values(
-        'metodo_pago__nombre'
-    ).annotate(total=Sum('monto')).order_by('-total')
+    # ── Por método de pago (mes) ───────────────────
+    por_metodo = (
+        Pago.objects.filter(fecha__gte=inicio_mes)
+        .values('metodo_pago__nombre')
+        .annotate(total=Sum('monto'), cantidad=Count('id'))
+        .order_by('-total')
+    )
 
+    # ── Deudas pendientes ──────────────────────────
     deudas = PlanPago.objects.filter(estado='pendiente').select_related(
         'tratamiento__paciente', 'tratamiento__servicio'
     ).order_by('fecha_vencimiento')
     total_deudas = deudas.aggregate(t=Sum('monto'))['t'] or 0
 
+    # ── Por dentista (mes actual) ──────────────────
+    por_doctor = (
+        Pago.objects.filter(fecha__gte=inicio_mes)
+        .values('doctor__id', 'doctor__first_name', 'doctor__last_name', 'doctor__username')
+        .annotate(total=Sum('monto'), cantidad=Count('id'), pacientes=Count('paciente', distinct=True))
+        .order_by('-total')
+    )
+
+    # ── Gráfico: últimos 30 días ───────────────────
+    dias_data = []
+    for i in range(29, -1, -1):
+        dia   = hoy - timedelta(days=i)
+        total = Pago.objects.filter(fecha=dia).aggregate(t=Sum('monto'))['t'] or 0
+        dias_data.append({'periodo': dia.strftime('%d/%m'), 'total': float(total)})
+
+    # ── Gráfico: últimos 12 meses ──────────────────
     meses_data = []
-    for i in range(5, -1, -1):
-        from dateutil.relativedelta import relativedelta
-        mes_inicio = (hoy.replace(day=1) - relativedelta(months=i))
-        mes_fin = (mes_inicio + relativedelta(months=1))
-        total = Pago.objects.filter(
-            fecha__gte=mes_inicio, fecha__lt=mes_fin
-        ).aggregate(t=Sum('monto'))['t'] or 0
-        meses_data.append({
-            'mes': mes_inicio.strftime('%b %Y'),
-            'total': float(total),
-        })
+    for i in range(11, -1, -1):
+        ms  = hoy.replace(day=1) - relativedelta(months=i)
+        mf  = ms + relativedelta(months=1)
+        total = Pago.objects.filter(fecha__gte=ms, fecha__lt=mf).aggregate(t=Sum('monto'))['t'] or 0
+        meses_data.append({'periodo': ms.strftime('%b %Y'), 'total': float(total)})
+
+    # ── Gráfico: últimos 5 años ────────────────────
+    anios_data = []
+    for i in range(4, -1, -1):
+        anio  = hoy.year - i
+        total = Pago.objects.filter(fecha__year=anio).aggregate(t=Sum('monto'))['t'] or 0
+        anios_data.append({'periodo': str(anio), 'total': float(total)})
 
     return render(request, 'facturacion/reporte.html', {
-        'pagos_mes': pagos_mes,
-        'total_mes': total_mes,
-        'por_metodo': por_metodo,
-        'deudas': deudas,
-        'total_deudas': total_deudas,
-        'meses_data': meses_data,
-        'hoy': hoy,
+        'pagos_mes':     pagos_mes,
+        'total_mes':     total_mes,
+        'total_anio':    total_anio,
+        'pacientes_mes': pacientes_mes,
+        'por_metodo':    por_metodo,
+        'deudas':        deudas,
+        'total_deudas':  total_deudas,
+        'por_doctor':    por_doctor,
+        'dias_data':     json.dumps(dias_data),
+        'meses_data':    json.dumps(meses_data),
+        'anios_data':    json.dumps(anios_data),
+        'hoy':           hoy,
     })
 
 

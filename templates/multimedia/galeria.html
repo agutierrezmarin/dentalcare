@@ -1,161 +1,813 @@
 {% extends "base/base.html" %}
-{% block title %}Galería - {{ paciente }}{% endblock %}
+{% block title %}Galería — {{ paciente }}{% endblock %}
 {% block breadcrumb %}
   <a href="{% url 'pacientes:lista' %}" class="text-decoration-none text-secondary">Pacientes</a>
   / <a href="{% url 'pacientes:detalle' paciente.pk %}" class="text-decoration-none text-secondary">{{ paciente }}</a>
-  / Galería multimedia
+  / Galería
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ══ Hero ═══════════════════════════════════════════ */
+.pac-hero {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg); padding: 1rem 1.25rem;
+  margin-bottom: 1rem; box-shadow: var(--shadow);
+}
+.pac-avatar-letters {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 800; font-size: 1.15rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border: 3px solid var(--border);
+}
+.pac-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--accent); flex-shrink: 0;
+}
+.pac-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 600; padding: .22em .6em;
+  border-radius: 20px; background: var(--bg-base);
+  border: 1px solid var(--border-light); color: var(--text-2);
+}
+
+/* ══ Stats ═══════════════════════════════════════════ */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: .5rem; margin-bottom: 1rem;
+}
+.stat-card {
+  background: var(--bg-surface); border: 1px solid var(--border-light);
+  border-radius: var(--radius); padding: .65rem .5rem;
+  text-align: center; transition: box-shadow .15s;
+}
+.stat-card:hover { box-shadow: var(--shadow); }
+.stat-val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.stat-lbl { font-size: .58rem; color: var(--text-3); text-transform: uppercase;
+            letter-spacing: .06em; margin-top: .2rem; }
+
+/* ══ Acciones ════════════════════════════════════════ */
+.btn-action {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .75rem 1rem; border-radius: 12px;
+  border: 1.5px solid var(--border-light); background: var(--bg-surface);
+  cursor: pointer; color: var(--text-1); text-decoration: none;
+  transition: border-color .15s, background .15s; width: 100%;
+}
+.btn-action:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-surface));
+  color: var(--text-1);
+}
+.btn-action-icon {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+
+/* ══ Filtros tipo ════════════════════════════════════ */
+.tipo-chips {
+  display: flex; gap: .3rem; overflow-x: auto; padding: .3rem 0 .5rem;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap;
+}
+.tipo-chips::-webkit-scrollbar { display: none; }
+.tipo-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .28em .72em; border-radius: 20px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg-base);
+  font-size: .72rem; font-weight: 600; color: var(--text-2);
+  white-space: nowrap; flex-shrink: 0; transition: all .12s;
+}
+.tipo-chip.on { color: #fff; border-color: transparent; }
+
+/* ══ Foto card ═══════════════════════════════════════ */
+.foto-card {
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-card); cursor: pointer;
+  transition: transform .13s, box-shadow .13s;
+  display: flex; flex-direction: column;
+}
+.foto-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.foto-card:active { transform: translateY(0); }
+.foto-thumb {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; background: var(--bg-base);
+}
+.foto-thumb-ph {
+  width: 100%; aspect-ratio: 4/3;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-base); color: var(--text-3);
+}
+.foto-info { padding: .45rem .55rem; flex: 1; }
+.foto-titulo { font-size: .78rem; font-weight: 600; line-height: 1.3;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foto-meta { font-size: .65rem; color: var(--text-3); margin-top: .12rem;
+             display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+
+/* ══ Tipo badge ══════════════════════════════════════ */
+.tipo-badge {
+  display: inline-flex; align-items: center; gap: .22rem;
+  font-size: .6rem; font-weight: 700; padding: .12em .45em;
+  border-radius: 6px; white-space: nowrap;
+}
+
+/* ══ Comparación card ════════════════════════════════ */
+.comp-card {
+  background: var(--bg-card); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: .75rem;
+}
+.comp-header {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .9rem; background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
+}
+.comp-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.comp-side { position: relative; }
+.comp-side img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+}
+.comp-lbl {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: .3rem .5rem; font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  background: linear-gradient(transparent, rgba(0,0,0,.65));
+  color: #fff;
+}
+.comp-divider {
+  position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 2px; background: var(--bg-surface); z-index: 1;
+  transform: translateX(-50%);
+}
+
+/* ══ Drop zone ════════════════════════════════════════ */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px; padding: 1.5rem 1rem;
+  text-align: center; cursor: pointer;
+  transition: all .2s; background: var(--bg-base);
+  position: relative; overflow: hidden;
+}
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-base));
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0;
+  cursor: pointer; width: 100%; height: 100%;
+}
+.dz-preview {
+  display: none; margin-top: .75rem;
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px solid var(--border-light);
+}
+.dz-preview img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
+.dz-file-info {
+  font-size: .72rem; color: var(--text-2); padding: .35rem .6rem;
+  background: var(--bg-surface); display: flex; align-items: center; gap: .4rem;
+}
+
+/* ══ Lightbox modal ══════════════════════════════════ */
+.modal-lb .modal-content {
+  background: #0a0c12; border: 1px solid rgba(255,255,255,.08);
+}
+.modal-lb .modal-body { padding: 0; }
+.lb-img { width: 100%; max-height: 75vh; object-fit: contain; display: block; }
+
+/* ══ Section heading ═════════════════════════════════ */
+.sec-head { display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: .75rem; }
+.sec-title { display: flex; align-items: center; gap: .45rem;
+             font-weight: 700; font-size: .88rem; color: var(--text-1); }
+.sec-icon { width: 28px; height: 28px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .8rem; flex-shrink: 0; }
+
+/* ══ Modal ═══════════════════════════════════════════ */
+.modal-gal .modal-content {
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px;
+}
+.modal-gal .modal-header { border-color: var(--border-light); padding: .85rem 1.1rem; }
+.modal-gal .modal-body   { padding: 1rem 1.1rem; }
+.modal-gal .modal-footer { border-color: var(--border-light); padding: .75rem 1.1rem; }
+.fl { font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-3); margin-bottom: .25rem; display: block; }
+
+/* ══ Empty state ══════════════════════════════════════ */
+.empty-gal { text-align: center; padding: 3rem 1rem; color: var(--text-3); }
+
+/* ══ Responsive ══════════════════════════════════════ */
+@media (max-width: 575px) {
+  .pac-avatar-letters, .pac-avatar { width: 48px; height: 48px; font-size: 1rem; }
+  .stat-val { font-size: 1.15rem; }
+  .btn-action { padding: .6rem .8rem; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h4 class="fw-bold mb-0">Galería multimedia</h4>
-    <p class="text-secondary mb-0" style="font-size:.82rem">{{ paciente }}</p>
+
+<!-- ══ HERO ══ -->
+<div class="pac-hero">
+  <div class="d-flex align-items-center gap-3">
+    {% if paciente.foto %}
+    <img src="{{ paciente.foto.url }}" class="pac-avatar" alt="">
+    {% else %}
+    <div class="pac-avatar-letters">{{ paciente.nombres.0 }}{{ paciente.apellidos.0 }}</div>
+    {% endif %}
+    <div class="flex-grow-1" style="min-width:0">
+      <h5 class="fw-bold mb-1" style="line-height:1.2;font-size:1.05rem">
+        {{ paciente.apellidos }} {{ paciente.nombres }}
+      </h5>
+      <div class="d-flex flex-wrap gap-1">
+        {% if paciente.ci %}
+        <span class="pac-chip"><i class="fa-solid fa-id-badge fa-xs" style="color:#8b5cf6"></i>{{ paciente.ci }}</span>
+        {% endif %}
+        {% if paciente.edad %}
+        <span class="pac-chip"><i class="fa-solid fa-cake-candles fa-xs" style="color:#f59e0b"></i>{{ paciente.edad }} años</span>
+        {% endif %}
+        <span class="pac-chip" style="color:#06b6d4">
+          <i class="fa-solid fa-images fa-xs"></i>Galería multimedia
+        </span>
+      </div>
+    </div>
+    <a href="{% url 'pacientes:detalle' paciente.pk %}"
+       class="btn btn-sm btn-outline-secondary flex-shrink-0"
+       style="font-size:.72rem;padding:.3rem .65rem">
+      <i class="fa-solid fa-arrow-left me-1"></i>Volver
+    </a>
   </div>
-  <div class="d-flex gap-2">
-    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalComparar">
-      <i class="bi bi-layout-split me-1"></i>Comparar
+</div>
+
+<!-- ══ STATS ══ -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--accent)">{{ total_fotos }}</div>
+    <div class="stat-lbl">Fotos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#4e9ff5">{{ comparaciones|length }}</div>
+    <div class="stat-lbl">Comparaciones</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#a78bfa">
+      {% regroup fotos by tipo as ft %}{{ ft|length }}
+    </div>
+    <div class="stat-lbl">Categorías</div>
+  </div>
+</div>
+
+<!-- ══ ACCIONES ══ -->
+<div class="row g-2 mb-3">
+  <div class="col-6">
+    <button class="btn-action" data-bs-toggle="modal" data-bs-target="#modalSubir">
+      <div class="btn-action-icon"
+           style="background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+                  box-shadow:0 3px 10px rgba(45,184,122,.3)">
+        <i class="fa-solid fa-cloud-arrow-up" style="color:#fff"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:.88rem">Subir imagen</div>
+        <div style="font-size:.68rem;color:var(--text-3)">Se comprime automáticamente</div>
+      </div>
     </button>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSubir">
-      <i class="bi bi-upload me-1"></i>Subir imagen
+  </div>
+  <div class="col-6">
+    <button class="btn-action" data-bs-toggle="modal" data-bs-target="#modalComparar">
+      <div class="btn-action-icon" style="background:rgba(78,159,245,.15)">
+        <i class="fa-solid fa-code-compare" style="color:#4e9ff5"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:.88rem">Comparar</div>
+        <div style="font-size:.68rem;color:var(--text-3)">Antes / Después</div>
+      </div>
     </button>
   </div>
 </div>
 
-<!-- Comparaciones antes/después -->
+<!-- ══ COMPARACIONES ══ -->
 {% if comparaciones %}
-<h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">
-  Comparaciones antes / después
-</h6>
-<div class="row g-3 mb-4">
+<div class="sec-head mt-1">
+  <div class="sec-title">
+    <div class="sec-icon" style="background:rgba(78,159,245,.12);color:#4e9ff5">
+      <i class="fa-solid fa-code-compare fa-xs"></i>
+    </div>
+    Comparaciones antes / después
+    <span style="font-size:.7rem;font-weight:600;color:var(--text-3);
+                 background:var(--bg-base);border:1px solid var(--border-light);
+                 border-radius:10px;padding:.1em .5em;margin-left:.1rem">
+      {{ comparaciones|length }}
+    </span>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
   {% for c in comparaciones %}
   <div class="col-12 col-md-6">
-    <div class="card">
-      <div class="card-header py-2">{{ c.titulo }}</div>
-      <div class="card-body">
-        <div class="row g-2">
-          <div class="col-6">
-            <div class="text-secondary mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Antes</div>
-            {% if c.foto_antes %}
-            <img src="{{ c.foto_antes.imagen.url }}" class="img-fluid rounded" style="max-height:180px;object-fit:cover;width:100%">
-            {% else %}
-            <div class="rounded d-flex align-items-center justify-content-center"
-                 style="height:120px;background:var(--bg-hover);color:var(--text-3)">Sin foto</div>
-            {% endif %}
-          </div>
-          <div class="col-6">
-            <div class="text-secondary mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Después</div>
-            {% if c.foto_despues %}
-            <img src="{{ c.foto_despues.imagen.url }}" class="img-fluid rounded" style="max-height:180px;object-fit:cover;width:100%">
-            {% else %}
-            <div class="rounded d-flex align-items-center justify-content-center"
-                 style="height:120px;background:var(--bg-hover);color:var(--text-3)">Sin foto</div>
-            {% endif %}
-          </div>
+    <div class="comp-card">
+      <div class="comp-header">
+        <div style="width:26px;height:26px;border-radius:7px;flex-shrink:0;
+                    background:rgba(78,159,245,.15);
+                    display:flex;align-items:center;justify-content:center">
+          <i class="fa-solid fa-code-compare fa-xs" style="color:#4e9ff5"></i>
         </div>
-        {% if c.notas %}
-        <p class="mt-2 text-secondary mb-0" style="font-size:.8rem;font-style:italic">{{ c.notas }}</p>
-        {% endif %}
+        <div class="fw-bold flex-grow-1" style="font-size:.85rem;min-width:0;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ c.titulo }}
+        </div>
+        <span style="font-size:.62rem;color:var(--text-3);flex-shrink:0">
+          {{ c.fecha|date:"d/m/Y" }}
+        </span>
       </div>
+
+      <div class="comp-imgs" style="position:relative">
+        <div class="comp-side">
+          {% if c.foto_antes %}
+          <img src="{{ c.foto_antes.imagen.url }}" alt="Antes" loading="lazy">
+          {% else %}
+          <div style="width:100%;aspect-ratio:4/3;background:var(--bg-base);
+                      display:flex;align-items:center;justify-content:center;color:var(--text-3)">
+            <i class="fa-solid fa-image-slash fa-lg"></i>
+          </div>
+          {% endif %}
+          <div class="comp-lbl"><i class="fa-solid fa-clock-rotate-left fa-xs me-1"></i>Antes</div>
+        </div>
+        <div class="comp-divider"></div>
+        <div class="comp-side">
+          {% if c.foto_despues %}
+          <img src="{{ c.foto_despues.imagen.url }}" alt="Después" loading="lazy">
+          {% else %}
+          <div style="width:100%;aspect-ratio:4/3;background:var(--bg-base);
+                      display:flex;align-items:center;justify-content:center;color:var(--text-3)">
+            <i class="fa-solid fa-image-slash fa-lg"></i>
+          </div>
+          {% endif %}
+          <div class="comp-lbl"><i class="fa-solid fa-circle-check fa-xs me-1"></i>Después</div>
+        </div>
+      </div>
+
+      {% if c.notas %}
+      <div style="padding:.5rem .9rem;font-size:.78rem;color:var(--text-2);font-style:italic;
+                  border-top:1px solid var(--border-light)">
+        <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>{{ c.notas }}
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endfor %}
 </div>
 {% endif %}
 
-<!-- Galería por tipo -->
-{% regroup fotos by get_tipo_display as fotos_por_tipo %}
-{% for tipo_grupo in fotos_por_tipo %}
-<h6 class="text-secondary mb-2 mt-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">
-  {{ tipo_grupo.grouper }}
-</h6>
-<div class="row g-2 mb-3">
-  {% for foto in tipo_grupo.list %}
-  <div class="col-6 col-md-3 col-lg-2">
-    <div class="card h-100">
-      <a href="{{ foto.imagen.url }}" target="_blank">
-        <img src="{{ foto.imagen.url }}" class="card-img-top" style="height:110px;object-fit:cover">
-      </a>
-      <div class="card-body p-2">
-        <div style="font-size:.75rem;font-weight:500;line-height:1.2">{{ foto.titulo }}</div>
-        <div style="font-size:.7rem;color:var(--text-2)">{{ foto.fecha|date:"d/m/Y" }}</div>
-        {% if foto.numero_diente %}
-        <div style="font-size:.7rem;color:var(--accent);font-family:'Space Mono',monospace">D{{ foto.numero_diente }}</div>
-        {% endif %}
+<!-- ══ GALERÍA ══ -->
+<div class="sec-head">
+  <div class="sec-title">
+    <div class="sec-icon" style="background:rgba(6,182,212,.12);color:#06b6d4">
+      <i class="fa-solid fa-images fa-xs"></i>
+    </div>
+    Fotos clínicas
+  </div>
+</div>
+
+{% if fotos %}
+<!-- Filtros por tipo -->
+<div class="tipo-chips mb-3" id="tipoChips">
+  <button class="tipo-chip on" data-tipo=""
+          style="background:var(--accent);border-color:transparent;color:#fff">
+    <i class="fa-solid fa-border-all fa-xs"></i>Todas
+  </button>
+  {% regroup fotos by tipo as fotos_por_tipo %}
+  {% for g in fotos_por_tipo %}
+  <button class="tipo-chip" data-tipo="{{ g.grouper }}">
+    {% if g.grouper == 'antes' %}<i class="fa-solid fa-clock-rotate-left fa-xs"></i>
+    {% elif g.grouper == 'durante' %}<i class="fa-solid fa-gears fa-xs"></i>
+    {% elif g.grouper == 'despues' %}<i class="fa-solid fa-circle-check fa-xs"></i>
+    {% elif g.grouper == 'radiografia' %}<i class="fa-solid fa-x-ray fa-xs"></i>
+    {% elif g.grouper == 'intraoral' %}<i class="fa-solid fa-tooth fa-xs"></i>
+    {% elif g.grouper == 'extraoral' %}<i class="fa-solid fa-face-smile fa-xs"></i>
+    {% elif g.grouper == 'panoramica' %}<i class="fa-solid fa-panorama fa-xs"></i>
+    {% else %}<i class="fa-solid fa-image fa-xs"></i>{% endif %}
+    {{ g.grouper|capfirst }}
+    <span style="background:rgba(255,255,255,.18);border-radius:6px;
+                 padding:.05em .35em;font-size:.6rem">{{ g.list|length }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<!-- Grid de fotos -->
+<div class="row g-2" id="fotoGrid">
+  {% for foto in fotos %}
+  <div class="col-6 col-sm-4 col-md-3 col-lg-2 foto-item" data-tipo="{{ foto.tipo }}">
+    <div class="foto-card h-100"
+         data-bs-toggle="modal" data-bs-target="#modalLightbox"
+         data-src="{{ foto.imagen.url }}"
+         data-titulo="{{ foto.titulo }}"
+         data-tipo="{{ foto.get_tipo_display }}"
+         data-fecha="{{ foto.fecha|date:'d/m/Y' }}"
+         data-diente="{{ foto.numero_diente|default:'' }}"
+         data-desc="{{ foto.descripcion|default:'' }}"
+         data-dr="{{ foto.subido_por.get_full_name|default:foto.subido_por.username|default:'' }}">
+      <img src="{{ foto.imagen.url }}" class="foto-thumb" alt="{{ foto.titulo }}" loading="lazy">
+      <div class="foto-info">
+        <div class="foto-titulo">{{ foto.titulo }}</div>
+        <div class="foto-meta">
+          {% if foto.tipo == 'antes' %}
+          <span class="tipo-badge" style="background:rgba(245,158,11,.15);color:#f59e0b">
+            <i class="fa-solid fa-clock-rotate-left fa-xs"></i>Antes
+          </span>
+          {% elif foto.tipo == 'durante' %}
+          <span class="tipo-badge" style="background:rgba(78,159,245,.15);color:#4e9ff5">
+            <i class="fa-solid fa-gears fa-xs"></i>Durante
+          </span>
+          {% elif foto.tipo == 'despues' %}
+          <span class="tipo-badge" style="background:rgba(34,197,94,.15);color:#22c55e">
+            <i class="fa-solid fa-circle-check fa-xs"></i>Después
+          </span>
+          {% elif foto.tipo == 'radiografia' %}
+          <span class="tipo-badge" style="background:rgba(167,139,250,.15);color:#a78bfa">
+            <i class="fa-solid fa-x-ray fa-xs"></i>Rx
+          </span>
+          {% elif foto.tipo == 'intraoral' %}
+          <span class="tipo-badge" style="background:rgba(6,182,212,.15);color:#06b6d4">
+            <i class="fa-solid fa-tooth fa-xs"></i>Intraoral
+          </span>
+          {% elif foto.tipo == 'extraoral' %}
+          <span class="tipo-badge" style="background:rgba(248,113,113,.15);color:#f87171">
+            <i class="fa-solid fa-face-smile fa-xs"></i>Extraoral
+          </span>
+          {% elif foto.tipo == 'panoramica' %}
+          <span class="tipo-badge" style="background:rgba(45,212,191,.15);color:#2dd4bf">
+            <i class="fa-solid fa-panorama fa-xs"></i>Panorámica
+          </span>
+          {% else %}
+          <span class="tipo-badge" style="background:rgba(107,114,128,.15);color:#9ca3af">
+            <i class="fa-solid fa-image fa-xs"></i>Otro
+          </span>
+          {% endif %}
+          {% if foto.numero_diente %}
+          <span style="font-family:'Space Mono',monospace;color:var(--accent);font-size:.62rem">
+            D{{ foto.numero_diente }}
+          </span>
+          {% endif %}
+        </div>
+        <div style="font-size:.62rem;color:var(--text-3);margin-top:.1rem">
+          <i class="fa-solid fa-calendar fa-xs me-1"></i>{{ foto.fecha|date:"d/m/Y" }}
+        </div>
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
-{% empty %}
-<div class="text-center py-5 text-secondary">
-  <i class="bi bi-images" style="font-size:3rem;opacity:.2"></i>
-  <p class="mt-3">Sin imágenes en la galería</p>
-</div>
-{% endfor %}
 
-<!-- Modal subir -->
-<div class="modal fade" id="modalSubir" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
-      <div class="modal-header" style="border-color:var(--border)">
-        <h5 class="modal-title">Subir imagen</h5>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+{% else %}
+<div class="empty-gal">
+  <i class="fa-solid fa-images fa-3x mb-3" style="opacity:.12"></i>
+  <p class="fw-semibold mb-1" style="font-size:.95rem">Sin imágenes en la galería</p>
+  <p style="font-size:.8rem;margin:0">
+    Usa el botón <strong>Subir imagen</strong> para agregar la primera foto clínica.
+  </p>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL SUBIR IMAGEN (con drag & drop)
+══════════════════════════════════════════════ -->
+<div class="modal fade modal-gal" id="modalSubir" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
+                      background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+                      display:flex;align-items:center;justify-content:center;
+                      box-shadow:0 3px 10px rgba(45,184,122,.3)">
+            <i class="fa-solid fa-cloud-arrow-up" style="color:#fff;font-size:.85rem"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:.92rem">Subir imagen</div>
+            <div style="font-size:.68rem;color:var(--text-3)">
+              Se comprime automáticamente · máx. 1600 px · JPEG 82%
+            </div>
+          </div>
+        </div>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="post" enctype="multipart/form-data">
+
+      <form method="post" enctype="multipart/form-data" id="formSubir">
         {% csrf_token %}
         <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Tipo</label>{{ form.tipo }}</div>
-          <div class="mb-3"><label class="form-label">Título</label>{{ form.titulo }}</div>
-          <div class="mb-3"><label class="form-label">Imagen</label>{{ form.imagen }}</div>
-          <div class="mb-3"><label class="form-label">Descripción</label>{{ form.descripcion }}</div>
-          <div><label class="form-label">N° Diente (opcional)</label>{{ form.numero_diente }}</div>
+
+          <!-- Drop zone -->
+          <div class="drop-zone mb-3" id="dropZone">
+            <input type="file" name="imagen" id="id_imagen" accept="image/*" required>
+            <i class="fa-solid fa-cloud-arrow-up fa-2x mb-2" style="color:var(--accent);opacity:.6"></i>
+            <div style="font-weight:600;font-size:.88rem;margin-bottom:.25rem">
+              Arrastra una imagen aquí
+            </div>
+            <div style="font-size:.75rem;color:var(--text-3)">
+              o <span style="color:var(--accent);font-weight:600">haz clic para seleccionar</span>
+            </div>
+            <div style="font-size:.65rem;color:var(--text-3);margin-top:.4rem">
+              JPG, PNG, WEBP — se convierte a JPEG automáticamente
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div class="dz-preview" id="dzPreview">
+            <img id="dzPreviewImg" src="" alt="Preview">
+            <div class="dz-file-info">
+              <i class="fa-solid fa-file-image fa-xs" style="color:var(--accent)"></i>
+              <span id="dzFileName">—</span>
+              <span id="dzFileSize" style="margin-left:auto;color:var(--text-3)"></span>
+            </div>
+          </div>
+
+          <!-- Campos del formulario -->
+          <div class="row g-2 mt-1">
+            <div class="col-6">
+              <label class="fl"><i class="fa-solid fa-tag fa-xs me-1" style="color:var(--accent)"></i>Tipo *</label>
+              {{ form.tipo }}
+            </div>
+            <div class="col-6">
+              <label class="fl"><i class="fa-solid fa-tooth fa-xs me-1" style="color:#06b6d4"></i>N° Diente</label>
+              {{ form.numero_diente }}
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <label class="fl"><i class="fa-solid fa-heading fa-xs me-1" style="color:#8b5cf6"></i>Título *</label>
+            {{ form.titulo }}
+            {% if form.titulo.errors %}
+            <div class="text-danger mt-1" style="font-size:.75rem">{{ form.titulo.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mt-2">
+            <label class="fl">
+              <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>Descripción
+              <span style="font-weight:400;font-size:.6rem">(opcional)</span>
+            </label>
+            {{ form.descripcion }}
+          </div>
+
+          {% if form.errors and not form.titulo.errors %}
+          <div class="alert alert-danger py-2 mt-2" style="font-size:.8rem">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>Revisa los campos requeridos.
+          </div>
+          {% endif %}
+
         </div>
-        <div class="modal-footer" style="border-color:var(--border)">
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary btn-sm">Subir</button>
+          <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold" id="btnSubir">
+            <i class="fa-solid fa-cloud-arrow-up me-1"></i>Subir y comprimir
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal comparar -->
-<div class="modal fade" id="modalComparar" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
-      <div class="modal-header" style="border-color:var(--border)">
-        <h5 class="modal-title">Crear comparación</h5>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- ══════════════════════════════════════════════
+     MODAL COMPARAR
+══════════════════════════════════════════════ -->
+<div class="modal fade modal-gal" id="modalComparar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
+                      background:rgba(78,159,245,.15);
+                      display:flex;align-items:center;justify-content:center">
+            <i class="fa-solid fa-code-compare" style="color:#4e9ff5;font-size:.9rem"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:.92rem">Nueva comparación</div>
+            <div style="font-size:.68rem;color:var(--text-3)">Selecciona fotos antes / después</div>
+          </div>
+        </div>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" action="{% url 'multimedia:comparacion' paciente.pk %}">
         {% csrf_token %}
         <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Título</label>
-            <input type="text" name="titulo" class="form-control" required>
+
+          <div class="mb-3">
+            <label class="fl"><i class="fa-solid fa-heading fa-xs me-1" style="color:#8b5cf6"></i>Título *</label>
+            <input type="text" name="titulo" class="form-control form-control-sm"
+                   placeholder="Ej. Tratamiento diente 21" required>
           </div>
-          <div class="mb-3"><label class="form-label">Foto "Antes"</label>
-            <select name="foto_antes" class="form-select">
-              <option value="">—</option>
-              {% for f in fotos %}<option value="{{ f.pk }}">{{ f.titulo }} ({{ f.fecha|date:"d/m/Y" }})</option>{% endfor %}
-            </select>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="fl" style="color:#f59e0b">
+                <i class="fa-solid fa-clock-rotate-left fa-xs me-1"></i>Foto Antes
+              </label>
+              <select name="foto_antes" class="form-select form-select-sm">
+                <option value="">— Sin foto —</option>
+                {% for f in fotos %}
+                <option value="{{ f.pk }}">{{ f.titulo|truncatechars:22 }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="fl" style="color:#22c55e">
+                <i class="fa-solid fa-circle-check fa-xs me-1"></i>Foto Después
+              </label>
+              <select name="foto_despues" class="form-select form-select-sm">
+                <option value="">— Sin foto —</option>
+                {% for f in fotos %}
+                <option value="{{ f.pk }}">{{ f.titulo|truncatechars:22 }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
-          <div class="mb-3"><label class="form-label">Foto "Después"</label>
-            <select name="foto_despues" class="form-select">
-              <option value="">—</option>
-              {% for f in fotos %}<option value="{{ f.pk }}">{{ f.titulo }} ({{ f.fecha|date:"d/m/Y" }})</option>{% endfor %}
-            </select>
-          </div>
-          <div><label class="form-label">Notas</label>
-            <textarea name="notas" class="form-control" rows="2"></textarea>
+
+          <div>
+            <label class="fl"><i class="fa-solid fa-note-sticky fa-xs me-1"></i>Notas</label>
+            <textarea name="notas" class="form-control form-control-sm" rows="2"
+                      placeholder="Observaciones de la comparación…"></textarea>
           </div>
         </div>
-        <div class="modal-footer" style="border-color:var(--border)">
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary btn-sm">Crear</button>
+          <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">
+            <i class="fa-solid fa-code-compare me-1"></i>Crear comparación
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL LIGHTBOX
+══════════════════════════════════════════════ -->
+<div class="modal fade modal-lb" id="modalLightbox" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#0e111a;border-color:rgba(255,255,255,.07);padding:.65rem 1rem">
+        <div class="flex-grow-1 min-width-0">
+          <div id="lbTitulo" class="fw-bold" style="color:#e2e8f0;font-size:.92rem;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+          <div id="lbMeta" style="font-size:.7rem;color:#64748b"></div>
+        </div>
+        <a id="lbDescargar" href="#" download target="_blank"
+           class="btn btn-sm btn-outline-secondary ms-2 flex-shrink-0" style="font-size:.72rem">
+          <i class="fa-solid fa-download me-1"></i>Descargar
+        </a>
+        <button class="btn-close btn-close-white ms-2" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <img id="lbImg" src="" class="lb-img" alt="">
+      </div>
+      {% if fotos %}
+      <div class="modal-footer" style="background:#0e111a;border-color:rgba(255,255,255,.07);
+                                        padding:.5rem .75rem;justify-content:center;gap:.3rem">
+        <button id="lbPrev" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
+          <i class="fa-solid fa-chevron-left me-1"></i>Anterior
+        </button>
+        <span id="lbCounter" style="font-size:.72rem;color:#64748b;padding:0 .5rem"></span>
+        <button id="lbNext" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
+          Siguiente<i class="fa-solid fa-chevron-right ms-1"></i>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Datos de fotos para el lightbox ─────────────── */
+const FOTOS = [
+  {% for f in fotos %}
+  {
+    src:    "{{ f.imagen.url }}",
+    titulo: "{{ f.titulo|escapejs }}",
+    tipo:   "{{ f.get_tipo_display }}",
+    fecha:  "{{ f.fecha|date:'d/m/Y' }}",
+    diente: "{{ f.numero_diente|default:'' }}",
+    desc:   "{{ f.descripcion|truncatechars:80|escapejs }}",
+    dr:     "{{ f.subido_por.get_full_name|default:f.subido_por.username|default:''|escapejs }}",
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+/* ── Filtros por tipo ────────────────────────────── */
+document.querySelectorAll('.tipo-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const tipo = chip.dataset.tipo;
+    // Estilos del chip activo
+    document.querySelectorAll('.tipo-chip').forEach(c => {
+      c.classList.remove('on');
+      c.style.background = '';
+      c.style.color = '';
+      c.style.borderColor = '';
+    });
+    chip.classList.add('on');
+    chip.style.background = tipo ? '#4e9ff5' : 'var(--accent)';
+    chip.style.color = '#fff';
+    chip.style.borderColor = 'transparent';
+    // Filtrar cards
+    document.querySelectorAll('.foto-item').forEach(item => {
+      item.style.display = (!tipo || item.dataset.tipo === tipo) ? '' : 'none';
+    });
+  });
+});
+
+/* ── Drop zone ───────────────────────────────────── */
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('id_imagen');
+const dzPreview  = document.getElementById('dzPreview');
+const dzImg      = document.getElementById('dzPreviewImg');
+const dzFileName = document.getElementById('dzFileName');
+const dzFileSize = document.getElementById('dzFileSize');
+
+['dragenter','dragover'].forEach(evt =>
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
+);
+['dragleave','dragend'].forEach(evt =>
+  dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'))
+);
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    // Asignar al input
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    showPreview(file);
+  }
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) showPreview(fileInput.files[0]);
+});
+
+function showPreview(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    dzImg.src = e.target.result;
+    dzPreview.style.display = '';
+    dzFileName.textContent = file.name;
+    dzFileSize.textContent = file.size > 1024*1024
+      ? (file.size / (1024*1024)).toFixed(1) + ' MB'
+      : Math.round(file.size / 1024) + ' KB';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* Reset modal al cerrar */
+document.getElementById('modalSubir').addEventListener('hidden.bs.modal', () => {
+  dzPreview.style.display = 'none';
+  dzImg.src = '';
+  dropZone.classList.remove('drag-over');
+});
+
+/* ── Lightbox ────────────────────────────────────── */
+let lbIdx = 0;
+
+function openLightbox(idx) {
+  lbIdx = idx;
+  const f = FOTOS[idx];
+  document.getElementById('lbImg').src = f.src;
+  document.getElementById('lbDescargar').href = f.src;
+  document.getElementById('lbTitulo').textContent = f.titulo;
+  let meta = f.tipo + ' · ' + f.fecha;
+  if (f.diente) meta += ' · Diente ' + f.diente;
+  if (f.dr)     meta += ' · ' + f.dr;
+  document.getElementById('lbMeta').textContent = meta;
+  const counter = document.getElementById('lbCounter');
+  if (counter) counter.textContent = (idx + 1) + ' / ' + FOTOS.length;
+}
+
+document.querySelectorAll('.foto-card[data-src]').forEach((card, idx) => {
+  card.addEventListener('click', () => openLightbox(idx));
+});
+
+const lbPrev = document.getElementById('lbPrev');
+const lbNext = document.getElementById('lbNext');
+if (lbPrev) lbPrev.addEventListener('click', () => openLightbox((lbIdx - 1 + FOTOS.length) % FOTOS.length));
+if (lbNext) lbNext.addEventListener('click', () => openLightbox((lbIdx + 1) % FOTOS.length));
+
+/* Navegación con teclado */
+document.getElementById('modalLightbox')?.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  openLightbox((lbIdx - 1 + FOTOS.length) % FOTOS.length);
+  if (e.key === 'ArrowRight') openLightbox((lbIdx + 1) % FOTOS.length);
+});
+
+/* ── Abrir modal con errores ─────────────────────── */
+{% if form.errors %}
+document.addEventListener('DOMContentLoaded', () => {
+  new bootstrap.Modal(document.getElementById('modalSubir')).show();
+});
+{% endif %}
+</script>
 {% endblock %}

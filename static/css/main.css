@@ -972,7 +972,7 @@ body.sb-collapsed .sidebar-footer > a {
     padding-bottom: 60px;
   }
 
-  .page-content { padding: .85rem; }
+  .page-content { padding: .85rem; overflow-x: hidden; }
   .topbar { padding: 0 .85rem; gap: .5rem; }
 
   /* Ocultar búsqueda en pantallas pequeñas, mostrar ícono */
@@ -988,7 +988,7 @@ body.sb-collapsed .sidebar-footer > a {
   .topbar-actions .btn span { display: none; }
   .topbar-actions .btn { padding: .35rem .55rem; }
 
-  /* Breadcrumb truncado */
+  /* Breadcrumb: JS muestra solo el último segmento */
   .topbar-breadcrumb {
     font-size: .8rem;
     overflow: hidden;
@@ -999,8 +999,8 @@ body.sb-collapsed .sidebar-footer > a {
 }
 
 @media (max-width: 480px) {
-  .topbar-breadcrumb { max-width: calc(100vw - 170px); }
-  .page-content { padding: .65rem; }
+  .topbar-breadcrumb { max-width: calc(100vw - 160px); }
+  .page-content { padding: .65rem; overflow-x: hidden; }
   .card-body { padding: 1rem; }
 }
 

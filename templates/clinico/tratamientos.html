@@ -8,491 +8,765 @@
 
 {% block extra_css %}
 <style>
-/* ── Cabecera de formulario ──────────────────────── */
-.form-section-header {
-  display: flex; align-items: center; gap: .6rem;
-  padding: .8rem 1rem;
-  border-bottom: 1.5px solid var(--border-light);
-  background: var(--bg-base);
-  border-radius: var(--radius) var(--radius) 0 0;
+/* ══ Hero (igual a detalle paciente) ═══════════════ */
+.pac-hero {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
 }
-.form-section-title { font-weight: 700; font-size: .9rem; color: var(--text-1); }
-.form-section-sub   { font-size: .7rem; color: var(--text-3); margin-top: .05rem; }
-
-/* ── Chips de categoría ───────────────────────────── */
-.cat-chips {
-  display: flex; gap: .35rem;
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; padding-bottom: 2px;
+.pac-avatar {
+  width: 60px; height: 60px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--accent); flex-shrink: 0;
 }
-.cat-chips::-webkit-scrollbar { display: none; }
-.cat-chip {
+.pac-avatar-letters {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 800; font-size: 1.25rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border: 3px solid var(--border);
+}
+.pac-chip {
   display: inline-flex; align-items: center; gap: .3rem;
-  padding: .3em .75em;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-base);
   font-size: .72rem; font-weight: 600;
+  padding: .22em .6em; border-radius: 20px;
+  background: var(--bg-base); border: 1px solid var(--border-light);
   color: var(--text-2);
-  cursor: pointer; white-space: nowrap;
-  transition: all .12s;
-  flex-shrink: 0;
 }
-.cat-chip:hover  { border-color: var(--accent); color: var(--accent); }
-.cat-chip.active { color: #fff; border-color: transparent; }
-.cat-chip-dot { width: 7px; height: 7px; border-radius: 50%; }
 
-/* ── Lista de servicios ───────────────────────────── */
+/* ══ Stats bar ══════════════════════════════════════ */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: .5rem; margin-bottom: 1rem;
+}
+.stat-card {
+  background: var(--bg-surface); border: 1px solid var(--border-light);
+  border-radius: var(--radius); padding: .75rem .5rem;
+  text-align: center; transition: box-shadow .15s;
+}
+.stat-card:hover { box-shadow: var(--shadow); }
+.stat-val { font-size: 1.4rem; font-weight: 800; color: var(--text-1); line-height: 1; }
+.stat-lbl { font-size: .6rem; color: var(--text-3); text-transform: uppercase;
+            letter-spacing: .06em; margin-top: .25rem; }
+
+/* ══ Section heading ════════════════════════════════ */
+.sec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .75rem;
+}
+.sec-title {
+  display: flex; align-items: center; gap: .45rem;
+  font-weight: 700; font-size: .88rem; color: var(--text-1);
+}
+.sec-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; flex-shrink: 0;
+}
+
+/* ── Modal fullscreen en móvil ─────────────── */
+.modal-trat .modal-dialog {
+  margin: 0 auto;
+  max-width: 560px;
+}
+@media (max-width: 575px) {
+  .modal-trat .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    min-height: 100dvh;
+  }
+  .modal-trat .modal-content {
+    border-radius: 0;
+    min-height: 100dvh;
+    border: none;
+  }
+}
+.modal-trat .modal-content {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.modal-trat .modal-header {
+  border-bottom: 1px solid var(--border-light);
+  padding: .85rem 1.1rem;
+}
+.modal-trat .modal-body {
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  max-height: calc(100dvh - 130px);
+}
+@media (max-width: 575px) {
+  .modal-trat .modal-body { max-height: calc(100dvh - 120px); }
+}
+.modal-trat .modal-footer {
+  border-top: 1px solid var(--border-light);
+  padding: .75rem 1.1rem;
+}
+
+/* ── Botón agregar ─────────────────────────── */
+.btn-agregar {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  width: 100%;
+  padding: .85rem 1rem;
+  background: var(--bg-surface);
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  text-align: left;
+  margin-bottom: 1rem;
+  color: var(--text-1);
+  text-decoration: none;
+}
+.btn-agregar:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-surface));
+  color: var(--text-1);
+}
+.btn-agregar-icon {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-mid));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1rem;
+  box-shadow: 0 3px 10px rgba(45,184,122,.3);
+}
+
+/* ── Búsqueda ──────────────────────────────── */
+.svc-search-wrap { position: relative; }
+.svc-search-wrap .sicon {
+  position: absolute; left: .8rem; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3); pointer-events: none; font-size: .82rem;
+}
+.svc-search-wrap input {
+  padding-left: 2.3rem;
+  background: var(--bg-base);
+  border-color: var(--border);
+}
+.svc-search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+/* ── Chips categoría ───────────────────────── */
+.cat-row {
+  display: flex; gap: .28rem;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding: .4rem 0 .2rem;
+}
+.cat-row::-webkit-scrollbar { display: none; }
+.cchip {
+  display: inline-flex; align-items: center; gap: .22rem;
+  padding: .22em .65em; border-radius: 20px;
+  border: 1.5px solid var(--border); background: var(--bg-base);
+  font-size: .7rem; font-weight: 600; color: var(--text-2);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all .12s;
+}
+.cchip.on { color: #fff; border-color: transparent; }
+
+/* ── Lista servicios ───────────────────────── */
 .svc-list {
-  display: flex; flex-direction: column; gap: .3rem;
-  max-height: 300px; overflow-y: auto;
+  max-height: 240px; overflow-y: auto;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  background: var(--bg-base);
   scrollbar-width: thin; scrollbar-color: var(--border) transparent;
 }
 .svc-list::-webkit-scrollbar { width: 4px; }
 .svc-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
+.svc-cat-hd {
+  padding: .3rem .75rem .08rem;
+  font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-3); display: flex; align-items: center; gap: .25rem;
+  position: sticky; top: 0; background: var(--bg-base); z-index: 1;
+}
 .svc-item {
-  display: flex; align-items: center; gap: .6rem;
-  padding: .55rem .75rem;
-  border-radius: 9px;
-  border: 1.5px solid transparent;
-  background: var(--bg-base);
-  cursor: pointer;
-  transition: all .12s;
-  position: relative;
-}
-.svc-item:hover {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
-}
-.svc-item.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
-}
-.svc-item-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.svc-item-name { font-size: .82rem; font-weight: 600; line-height: 1.2; flex-grow: 1; min-width: 0; }
-.svc-item-price { font-size: .72rem; color: var(--accent); font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-.svc-item-check {
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--accent); color: #fff;
-  display: none; align-items: center; justify-content: center;
-  font-size: .6rem; flex-shrink: 0;
-}
-.svc-item.selected .svc-item-check { display: flex; }
-
-.cat-group-label {
-  font-size: .65rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .07em; color: var(--text-3);
-  padding: .4rem .25rem .15rem;
-  display: flex; align-items: center; gap: .3rem;
-}
-
-/* ── Preview servicio seleccionado ───────────────── */
-.svc-preview {
-  border: 1.5px solid var(--accent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
-  padding: .75rem 1rem;
-}
-
-/* ── Treatment cards ──────────────────────────────── */
-.trat-card {
-  border-radius: 12px;
-  border: 1px solid var(--border-light);
-  background: var(--bg-card);
-  overflow: hidden;
-  margin-bottom: .85rem;
-}
-.trat-card-top {
-  border-top: 3px solid;
-  padding: .75rem 1rem;
-  border-bottom: 1px solid var(--border-light);
-}
-/* Stats económicos */
-.trat-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--border-light);
-}
-@media (max-width: 575px) {
-  .trat-stats { grid-template-columns: repeat(2, 1fr); }
-  .trat-stat:nth-child(odd)  { border-right: 1px solid var(--border-light); }
-  .trat-stat:nth-child(1),
-  .trat-stat:nth-child(2)    { border-bottom: 1px solid var(--border-light); }
-}
-.trat-stat {
-  padding: .55rem .5rem;
-  text-align: center;
-}
-.trat-stat-label { font-size: .62rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; }
-.trat-stat-val   { font-size: .95rem; font-weight: 700; margin-top: .1rem; }
-/* Progress bar */
-.pay-bar { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
-.pay-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
-/* Cita mini */
-.cita-mini {
   display: flex; align-items: center; gap: .55rem;
-  padding: .4rem .65rem;
-  border-radius: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
-  font-size: .78rem;
-}
-.cita-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-/* Badges */
-.est-badge {
-  display: inline-flex; align-items: center; gap: .3rem;
-  padding: .2em .65em; border-radius: 20px;
-  font-size: .68rem; font-weight: 700; white-space: nowrap;
-}
-.tooth-chip {
-  display: inline-flex; align-items: center; gap: .28rem;
-  background: rgba(167,139,250,.15); color: #a78bfa;
-  border: 1px solid rgba(167,139,250,.3);
-  padding: .18em .6em; border-radius: 20px;
-  font-size: .7rem; font-weight: 700;
-}
-
-/* ── FAB móvil ────────────────────────────────────── */
-.fab-agregar {
-  display: none;
-  position: fixed;
-  bottom: 72px; right: 16px;
-  z-index: 400;
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-mid));
-  box-shadow: 0 4px 18px rgba(45,184,122,.45);
-  color: #fff; font-size: 1.35rem;
-  border: none; cursor: pointer;
-  align-items: center; justify-content: center;
-  transition: transform .15s;
-}
-.fab-agregar:active { transform: scale(.9); }
-@media (max-width: 991px) {
-  .fab-agregar { display: flex; }
-  #formColDesktop { display: none !important; }
-}
-@media (min-width: 992px) {
-  #formColDesktop { display: block !important; }
-}
-
-/* ── Offcanvas formulario (móvil) ─────────────────── */
-.offcanvas-bottom.offcanvas-form {
-  height: 92dvh;
-  border-radius: 18px 18px 0 0;
-}
-.offcanvas-form .offcanvas-header {
+  padding: .58rem .75rem; cursor: pointer;
+  transition: background .1s;
   border-bottom: 1px solid var(--border-light);
-  padding: .9rem 1.1rem .7rem;
 }
-.offcanvas-form .offcanvas-body { overflow-y: auto; padding: 1rem 1.1rem; }
+.svc-item:last-child { border-bottom: none; }
+.svc-item:hover { background: var(--bg-hover); }
+.svc-item.sel  { background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface)); }
+.si-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.si-name  { font-size: .82rem; font-weight: 500; flex: 1; min-width: 0;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.si-price { font-size: .74rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.si-check { width: 15px; height: 15px; border-radius: 50%;
+            background: var(--accent); color: #fff;
+            display: none; align-items: center; justify-content: center;
+            font-size: .55rem; flex-shrink: 0; }
+.svc-item.sel .si-check { display: flex; }
 
-/* ── Campo número diente: quick-picks ─────────────── */
-.diente-quick {
-  display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem;
+/* ── Servicio elegido ──────────────────────── */
+.svc-chosen {
+  display: none; align-items: center; gap: .6rem;
+  padding: .55rem .8rem; border-radius: 10px; margin-bottom: .75rem;
+  border: 1.5px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
 }
-.diente-btn {
-  font-size: .68rem; font-weight: 700;
-  padding: .2rem .5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-base);
-  cursor: pointer; color: var(--text-2);
-  transition: all .1s;
-  font-family: 'Space Mono', monospace;
-}
-.diente-btn:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb,var(--accent) 8%,transparent); }
+.svc-chosen.show { display: flex; }
+.ch-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.ch-name { font-size: .86rem; font-weight: 700; flex: 1; min-width: 0;
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-meta { font-size: .7rem; color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
 
-/* ── Sticky acciones form ─────────────────────────── */
-.form-sticky-actions {
-  position: sticky; bottom: 0;
-  background: var(--bg-surface);
-  border-top: 1.5px solid var(--border-light);
-  padding: .8rem 1rem;
-  z-index: 10;
-}
+/* ── Labels formulario ─────────────────────── */
+.fl { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-3); margin-bottom: .2rem; display: block; }
 
+/* ── Extras ────────────────────────────────── */
+#extrasBody { display: none; }
+#extrasBody.open { display: block; }
+.extras-btn {
+  background: none; border: none; color: var(--text-3); font-size: .73rem;
+  font-weight: 600; cursor: pointer; padding: 0;
+  display: inline-flex; align-items: center; gap: .25rem; margin-bottom: .7rem;
+}
+.extras-btn:hover { color: var(--accent); }
+
+/* ── Tarjetas tratamiento ──────────────────── */
+.tc {
+  border-radius: 12px; border: 1.5px solid var(--border-light);
+  background: var(--bg-card); overflow: hidden;
+  margin-bottom: .7rem; border-left: 4px solid;
+}
+.tc-body { padding: .85rem 1rem; }
+.tc-name {
+  font-size: .95rem; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: .12rem;
+}
+.tc-sub {
+  font-size: .74rem; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: .5rem;
+}
+.tc-fin {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: .3rem; margin-bottom: .45rem;
+}
+.tc-fin-item {
+  display: flex; flex-direction: column;
+  background: var(--bg-surface); border: 1px solid var(--border-light);
+  border-radius: 8px; padding: .28rem .45rem;
+  min-width: 0; overflow: hidden;
+}
+.tc-fin-l { font-size: .57rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }
+.tc-fin-v { font-size: .8rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pay-bar  { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; margin-bottom: .55rem; }
+.pay-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.ebadge {
+  display: inline-flex; align-items: center; gap: .22rem;
+  padding: .13em .52em; border-radius: 20px;
+  font-size: .65rem; font-weight: 700; white-space: nowrap;
+}
+.tc-actions {
+  display: flex; flex-wrap: wrap; gap: .4rem;
+  padding-top: .6rem; border-top: 1px solid var(--border-light);
+}
+.tc-actions .form-select { font-size: .77rem; padding: .28rem .45rem; height: auto; }
+.cit {
+  display: flex; align-items: center; gap: .45rem;
+  font-size: .76rem; padding: .28rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.cit:last-child { border-bottom: none; }
+.cit-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Empty state ───────────────────────────── */
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-3); }
+
+/* ── Responsive ────────────────────────────── */
 @media (max-width: 575px) {
-  .trat-actions { flex-direction: column; }
-  .trat-actions > * { width: 100%; }
-  .trat-actions .form-select { width: 100% !important; }
+  .pac-hero { padding: .9rem; }
+  .pac-avatar, .pac-avatar-letters { width: 52px; height: 52px; }
+  .pac-avatar-letters { font-size: 1rem; }
+  .stat-val { font-size: 1.2rem; }
+  .tc-fin { grid-template-columns: repeat(2, 1fr); }
+  .svc-list { max-height: 200px; }
+  .tc { max-width: 100%; }
+  .tc-name { font-size: .88rem; }
+  .tc-sub  { font-size: .7rem; }
+}
+@media (max-width: 479px) {
+  .tc-body  { padding: .65rem .75rem; }
+  .tc-fin   { gap: .2rem; }
+  .tc-fin-item { padding: .2rem .35rem; }
+  .tc-fin-v { font-size: .74rem; }
+  .tc-name  { font-size: .84rem; }
+  .tc-actions { gap: .28rem; }
+  /* fila 1: Cita + select estado (full width) */
+  .tc-actions .form-select { flex: 1 1 100%; order: -1; }
+  /* fila 2: Pago + Eliminar */
+  .tc-actions .btn { flex: 1 1 calc(50% - .28rem); justify-content: center; display: flex; align-items: center; }
+  .tc-actions .btn.ms-auto { flex: 0 0 auto; }
+}
+@media (max-width: 360px) {
+  .tc-body { padding: .55rem .6rem; }
+  .tc-fin-v { font-size: .7rem; }
+  .tc-fin-l { font-size: .53rem; }
+  .ebadge   { font-size: .6rem; padding: .1em .42em; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
+{% regroup servicios by categoria as cat_groups %}
 
-<!-- ── Cabecera de página ── -->
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <div>
-    <h4 class="fw-bold mb-0">
-      <i class="fa-solid fa-tooth me-2" style="color:var(--accent)"></i>Plan de tratamientos
-    </h4>
-    <p class="mb-0" style="font-size:.82rem;color:var(--text-2)">{{ paciente.apellidos }} {{ paciente.nombres }}</p>
+<!-- ══ HERO ══ -->
+<div class="pac-hero">
+  <div class="d-flex align-items-center gap-3">
+    {% if paciente.foto %}
+    <img src="{{ paciente.foto.url }}" class="pac-avatar" alt="">
+    {% else %}
+    <div class="pac-avatar-letters">{{ paciente.nombres.0 }}{{ paciente.apellidos.0 }}</div>
+    {% endif %}
+    <div class="flex-grow-1" style="min-width:0">
+      <h5 class="fw-bold mb-1" style="line-height:1.2;font-size:1.05rem">
+        {{ paciente.apellidos }} {{ paciente.nombres }}
+      </h5>
+      <div class="d-flex flex-wrap gap-1">
+        {% if paciente.ci %}
+        <span class="pac-chip"><i class="fa-solid fa-id-badge fa-xs" style="color:#8b5cf6"></i>{{ paciente.ci }}</span>
+        {% endif %}
+        {% if paciente.edad %}
+        <span class="pac-chip"><i class="fa-solid fa-cake-candles fa-xs" style="color:#f59e0b"></i>{{ paciente.edad }} años</span>
+        {% endif %}
+        {% if paciente.telefono %}
+        <a href="tel:{{ paciente.telefono }}" class="pac-chip text-decoration-none">
+          <i class="fa-solid fa-phone fa-xs" style="color:#06b6d4"></i>{{ paciente.telefono }}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    <a href="{% url 'pacientes:detalle' paciente.pk %}"
+       class="btn btn-sm btn-outline-secondary flex-shrink-0"
+       style="font-size:.72rem;padding:.3rem .65rem">
+      <i class="fa-solid fa-arrow-left me-1"></i>Volver
+    </a>
   </div>
-  <a href="{% url 'pacientes:detalle' paciente.pk %}"
-     class="btn btn-outline-secondary btn-sm">
-    <i class="fa-solid fa-arrow-left me-1"></i>Volver
-  </a>
 </div>
 
-<!-- ══ LAYOUT ══ -->
-<div class="row g-3">
+<!-- ══ STATS ══ -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--accent)">{{ tratamientos|length }}</div>
+    <div class="stat-lbl">Total</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#22c55e">{{ completados }}</div>
+    <div class="stat-lbl">Completados</div>
+  </div>
+  <div class="stat-card">
+    {% if saldo_total > 0 %}
+    <div class="stat-val" style="color:#f87171;font-size:1.05rem">Bs {{ saldo_total }}</div>
+    <div class="stat-lbl" style="color:#f87171">Saldo</div>
+    {% else %}
+    <div class="stat-val" style="color:#22c55e">Bs 0</div>
+    <div class="stat-lbl">Saldo</div>
+    {% endif %}
+  </div>
+</div>
 
-  <!-- ── Formulario (columna izquierda — sólo desktop) ── -->
-  <div class="col-lg-4" id="formColDesktop"></div>
+<!-- ══ Agregar tratamiento ══ -->
+<button class="btn-agregar" data-bs-toggle="modal" data-bs-target="#modalTrat" type="button">
+  <div class="btn-agregar-icon"><i class="fa-solid fa-plus"></i></div>
+  <div>
+    <div style="font-weight:700;font-size:.92rem">Agregar tratamiento</div>
+    <div style="font-size:.73rem;color:var(--text-3)">Selecciona un servicio y completa los datos</div>
+  </div>
+</button>
 
-  <!-- ── Lista de tratamientos ── -->
-  <div class="col-12 col-lg-8">
+<!-- ══ Lista de tratamientos ══ -->
+<div class="sec-head">
+  <div class="sec-title">
+    <div class="sec-icon" style="background:rgba(78,159,245,.12);color:#4e9ff5">
+      <i class="fa-solid fa-tooth fa-xs"></i>
+    </div>
+    Tratamientos
+    {% if tratamientos %}
+    <span style="font-size:.7rem;font-weight:600;color:var(--text-3);
+                 background:var(--bg-base);border:1px solid var(--border-light);
+                 border-radius:10px;padding:.1em .55em;margin-left:.15rem">
+      {{ tratamientos|length }}
+    </span>
+    {% endif %}
+  </div>
+</div>
 
-    {% if not tratamientos %}
-    <div class="card">
-      <div class="card-body text-center py-5" style="color:var(--text-3)">
-        <i class="fa-solid fa-tooth fa-3x mb-3" style="opacity:.2"></i>
-        <p class="mb-1 fw-semibold">Sin tratamientos registrados</p>
-        <p style="font-size:.8rem;margin-top:.3rem;color:var(--text-3)">
-          Usa el botón <strong style="color:var(--accent)">+</strong> para agregar el primer tratamiento.
-        </p>
+{% if not tratamientos %}
+<div class="empty-state">
+  <i class="fa-solid fa-tooth fa-3x mb-3" style="opacity:.14"></i>
+  <p class="mb-0 fw-semibold" style="font-size:.9rem">Sin tratamientos registrados</p>
+  <p style="font-size:.78rem;margin-top:.3rem">Toca el botón de arriba para agregar el primero.</p>
+</div>
+{% endif %}
+
+{% for t in tratamientos %}
+{% with cc=t.servicio.categoria.color|default:"#6b7280" %}
+<div class="tc" style="border-left-color:{{ cc }}">
+  <div class="tc-body">
+
+    <!-- Nombre + badges -->
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+      <div class="tc-name flex-grow-1">{{ t.servicio.nombre }}</div>
+      <div class="d-flex flex-wrap gap-1 flex-shrink-0">
+        {% if t.estado == 'planificado' %}
+        <span class="ebadge" style="background:#a78bfa18;color:#a78bfa;border:1px solid #a78bfa40">Planificado</span>
+        {% elif t.estado == 'en_proceso' %}
+        <span class="ebadge" style="background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b40">En proceso</span>
+        {% elif t.estado == 'completado' %}
+        <span class="ebadge" style="background:#22c55e18;color:#22c55e;border:1px solid #22c55e40">Completado</span>
+        {% else %}
+        <span class="ebadge" style="background:#f8717118;color:#f87171;border:1px solid #f8717140">Cancelado</span>
+        {% endif %}
+        {% if t.numero_diente %}
+        <span class="ebadge" style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3)">
+          <i class="fa-solid fa-tooth fa-xs"></i> {{ t.numero_diente }}
+        </span>
+        {% endif %}
       </div>
+    </div>
+
+    <!-- Subtítulo -->
+    <div class="tc-sub">
+      <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:{{ cc }}"></i>{{ t.doctor.get_full_name|default:t.doctor.username }}
+      {% if t.servicio.categoria %}&nbsp;·&nbsp;{{ t.servicio.categoria.nombre }}{% endif %}
+      {% if t.fecha_inicio %}&nbsp;·&nbsp;{{ t.fecha_inicio|date:"d/m/Y" }}{% endif %}
+    </div>
+
+    <!-- Financiero -->
+    <div class="tc-fin">
+      <div class="tc-fin-item">
+        <span class="tc-fin-l">Precio</span>
+        <span class="tc-fin-v">Bs {{ t.precio_acordado }}</span>
+      </div>
+      <div class="tc-fin-item">
+        <span class="tc-fin-l">Pagado</span>
+        <span class="tc-fin-v" style="color:#22c55e">Bs {{ t.get_total_pagado }}</span>
+      </div>
+      <div class="tc-fin-item">
+        <span class="tc-fin-l">Saldo</span>
+        <span class="tc-fin-v" style="color:{% if t.get_saldo_pendiente > 0 %}#f87171{% else %}#22c55e{% endif %}">
+          Bs {{ t.get_saldo_pendiente }}
+        </span>
+      </div>
+      <div class="tc-fin-item">
+        <span class="tc-fin-l">Citas</span>
+        <span class="tc-fin-v">{{ t.citas.count }}</span>
+      </div>
+    </div>
+
+    <!-- Barra de pago -->
+    {% with pagado=t.get_total_pagado precio=t.precio_acordado %}
+    {% if precio > 0 %}
+    <div class="pay-bar">
+      <div class="pay-fill" style="width:{% widthratio pagado precio 100 %}%;background:{{ cc }}"></div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Citas -->
+    {% with cl=t.citas.all %}
+    {% if cl %}
+    <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:.28rem">
+      Citas ({{ cl.count }})
+    </div>
+    <div style="margin-bottom:.45rem">
+      {% for c in cl|slice:":3" %}
+      <div class="cit">
+        <span class="cit-dot" style="background:{% if c.estado == 'completada' %}#22c55e{% elif c.estado == 'cancelada' or c.estado == 'no_asistio' %}#f87171{% else %}#4e9ff5{% endif %}"></span>
+        <span class="fw-semibold">{{ c.fecha|date:"d/m/Y" }}</span>
+        <span style="color:var(--text-3)">{{ c.hora_inicio|time:"H:i" }}</span>
+        {% if c.doctor %}
+        <span style="color:var(--text-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">
+          · {{ c.doctor.get_full_name|default:c.doctor.username|truncatechars:18 }}
+        </span>
+        {% endif %}
+        <span class="ms-auto flex-shrink-0" style="font-size:.64rem;font-weight:700;
+          {% if c.estado == 'completada' %}color:#22c55e{% elif c.estado == 'cancelada' or c.estado == 'no_asistio' %}color:#f87171{% else %}color:#4e9ff5{% endif %}">
+          {{ c.get_estado_display }}
+        </span>
+      </div>
+      {% endfor %}
+      {% if cl.count > 3 %}
+      <div style="font-size:.7rem;color:var(--text-3);padding:.2rem 0">+ {{ cl.count|add:"-3" }} más</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if t.notas %}
+    <div style="font-size:.77rem;color:var(--text-2);font-style:italic;margin-bottom:.45rem;
+                padding:.38rem .55rem;background:var(--bg-surface);border-radius:7px">
+      <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>{{ t.notas }}
     </div>
     {% endif %}
 
-    {% for t in tratamientos %}
-    {% with cc=t.servicio.categoria.color|default:"#6b7280" %}
-    <div class="trat-card">
-
-      <!-- Header -->
-      <div class="trat-card-top" style="border-top-color:{{ cc }}">
-        <div class="d-flex align-items-start gap-2 flex-wrap">
-          <span style="width:38px;height:38px;border-radius:50%;flex-shrink:0;
-                       background:{{ cc }}20;color:{{ cc }};
-                       display:flex;align-items:center;justify-content:center">
-            <i class="fa-solid fa-tooth"></i>
-          </span>
-          <div class="flex-grow-1 min-width-0">
-            <div class="fw-bold" style="font-size:.95rem">{{ t.servicio.nombre }}</div>
-            <div style="font-size:.75rem;color:var(--text-2)">
-              <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:{{ cc }}"></i>{{ t.doctor.get_full_name|default:t.doctor.username }}
-              {% if t.fecha_inicio %}<span class="ms-2"><i class="fa-solid fa-calendar fa-xs me-1"></i>{{ t.fecha_inicio|date:"d/m/Y" }}</span>{% endif %}
-            </div>
-          </div>
-          <!-- Badges derecha -->
-          <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
-            {% if t.servicio.categoria %}
-            <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-                         padding:.18em .6em;border-radius:20px;
-                         background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40">
-              {{ t.servicio.categoria.nombre }}
-            </span>
-            {% endif %}
-            {% if t.estado == 'planificado' %}
-            <span class="est-badge" style="background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa40">
-              <span style="width:5px;height:5px;border-radius:50%;background:#a78bfa"></span>Planificado
-            </span>
-            {% elif t.estado == 'en_proceso' %}
-            <span class="est-badge" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40">
-              <span style="width:5px;height:5px;border-radius:50%;background:#f59e0b"></span>En proceso
-            </span>
-            {% elif t.estado == 'completado' %}
-            <span class="est-badge" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40">
-              <span style="width:5px;height:5px;border-radius:50%;background:#22c55e"></span>Completado
-            </span>
-            {% else %}
-            <span class="est-badge" style="background:#f8717120;color:#f87171;border:1px solid #f8717140">
-              <span style="width:5px;height:5px;border-radius:50%;background:#f87171"></span>Cancelado
-            </span>
-            {% endif %}
-            {% if t.numero_diente %}
-            <span class="tooth-chip"><i class="fa-solid fa-tooth fa-xs"></i>Diente {{ t.numero_diente }}</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats económicos -->
-      <div class="trat-stats">
-        <div class="trat-stat">
-          <div class="trat-stat-label">Precio</div>
-          <div class="trat-stat-val">Bs {{ t.precio_acordado }}</div>
-        </div>
-        <div class="trat-stat">
-          <div class="trat-stat-label">Pagado</div>
-          <div class="trat-stat-val" style="color:#22c55e">Bs {{ t.get_total_pagado }}</div>
-        </div>
-        <div class="trat-stat">
-          <div class="trat-stat-label">Pendiente</div>
-          <div class="trat-stat-val" style="color:{% if t.get_saldo_pendiente > 0 %}#f87171{% else %}#22c55e{% endif %}">
-            Bs {{ t.get_saldo_pendiente }}
-          </div>
-        </div>
-        <div class="trat-stat">
-          <div class="trat-stat-label">Citas</div>
-          <div class="trat-stat-val">{{ t.citas.count }}</div>
-        </div>
-      </div>
-
-      <!-- Barra de progreso -->
-      {% with pagado=t.get_total_pagado precio=t.precio_acordado %}
-      {% if precio > 0 %}
-      <div style="padding:.5rem 1rem;border-bottom:1px solid var(--border-light)">
-        <div class="d-flex justify-content-between mb-1" style="font-size:.68rem;color:var(--text-3)">
-          <span>Progreso de pago</span>
-          <span>{{ pagado|floatformat:0 }} / {{ precio|floatformat:0 }} Bs</span>
-        </div>
-        <div class="pay-bar">
-          <div class="pay-bar-fill" style="width:{% widthratio pagado precio 100 %}%;background:{{ cc }}"></div>
-        </div>
-      </div>
+    <!-- Acciones -->
+    <div class="tc-actions">
+      {% if t.estado != 'completado' and t.estado != 'cancelado' %}
+      <a href="{% url 'agenda:crear_cita' %}?paciente={{ paciente.pk }}&tratamiento={{ t.pk }}&servicio={{ t.servicio.pk }}&doctor={{ t.doctor.pk }}"
+         class="btn btn-sm btn-primary">
+        <i class="fa-solid fa-calendar-plus me-1"></i>Cita
+      </a>
       {% endif %}
-      {% endwith %}
 
-      <!-- Citas vinculadas -->
-      <div style="padding:.75rem 1rem">
-        {% with citas_list=t.citas.all %}
-        {% if citas_list %}
-        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-                    color:var(--text-3);margin-bottom:.45rem">
-          <i class="fa-solid fa-calendar-days me-1"></i>Citas ({{ citas_list.count }})
-        </div>
-        <div class="d-flex flex-column gap-2 mb-3">
-          {% for cita in citas_list|slice:":4" %}
-          <div class="cita-mini">
-            {% if cita.estado == 'completada' %}
-            <span class="cita-dot" style="background:#22c55e"></span>
-            {% elif cita.estado == 'cancelada' or cita.estado == 'no_asistio' %}
-            <span class="cita-dot" style="background:#f87171"></span>
-            {% else %}
-            <span class="cita-dot" style="background:#4e9ff5"></span>
-            {% endif %}
-            <span class="fw-semibold">{{ cita.fecha|date:"d/m/Y" }}</span>
-            <span style="color:var(--text-3)">{{ cita.hora_inicio|time:"H:i" }}</span>
-            {% if cita.doctor %}
-            <span style="color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              · {{ cita.doctor.get_full_name|default:cita.doctor.username|truncatechars:18 }}
-            </span>
-            {% endif %}
-            <span class="ms-auto flex-shrink-0"
-                  style="font-size:.65rem;font-weight:700;
-                         {% if cita.estado == 'completada' %}color:#22c55e
-                         {% elif cita.estado == 'cancelada' or cita.estado == 'no_asistio' %}color:#f87171
-                         {% else %}color:#4e9ff5{% endif %}">
-              {{ cita.get_estado_display }}
-            </span>
-          </div>
+      <form method="post" action="{% url 'clinico:estado_tratamiento' t.pk %}" style="display:contents">
+        {% csrf_token %}
+        <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for val, label in t.ESTADO_CHOICES %}
+          <option value="{{ val }}" {% if t.estado == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
-          {% if citas_list.count > 4 %}
-          <div style="font-size:.72rem;color:var(--text-3);text-align:center">
-            + {{ citas_list.count|add:"-4" }} cita{{ citas_list.count|add:"-4"|pluralize }} más
-          </div>
-          {% endif %}
-        </div>
-        {% else %}
-        <div class="cita-mini justify-content-center mb-3" style="color:var(--text-3)">
-          <i class="fa-solid fa-calendar-xmark me-1"></i>Sin citas para este tratamiento
-        </div>
-        {% endif %}
-        {% endwith %}
+        </select>
+      </form>
 
-        <!-- Acciones -->
-        <div class="d-flex flex-wrap gap-2 trat-actions">
-          {% if t.estado != 'completado' and t.estado != 'cancelado' %}
-          <a href="{% url 'agenda:crear_cita' %}?paciente={{ paciente.pk }}&tratamiento={{ t.pk }}&servicio={{ t.servicio.pk }}&doctor={{ t.doctor.pk }}"
-             class="btn btn-sm btn-primary">
-            <i class="fa-solid fa-calendar-plus me-1"></i>Programar cita
-          </a>
-          {% endif %}
+      <button type="button" class="btn btn-sm btn-outline-secondary"
+              data-bs-toggle="modal" data-bs-target="#mp{{ t.pk }}">
+        <i class="fa-solid fa-money-bill-wave me-1"></i>Pago
+      </button>
 
-          <form method="post" action="{% url 'clinico:estado_tratamiento' t.pk %}" class="d-contents">
-            {% csrf_token %}
-            <select name="estado" class="form-select form-select-sm" style="width:auto"
-                    onchange="this.form.submit()">
-              {% for val, label in t.ESTADO_CHOICES %}
-              <option value="{{ val }}" {% if t.estado == val %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </form>
-
-          <button type="button" class="btn btn-sm btn-outline-secondary"
-                  data-bs-toggle="modal" data-bs-target="#modalPlan{{ t.pk }}">
-            <i class="fa-solid fa-money-bill-wave me-1"></i>Plan de pago
-          </button>
-        </div>
-
-        {% if t.notas %}
-        <div class="mt-2 p-2 rounded" style="background:var(--bg-surface);font-size:.78rem;color:var(--text-2);font-style:italic">
-          <i class="fa-solid fa-note-sticky me-1" style="color:var(--text-3)"></i>{{ t.notas }}
-        </div>
-        {% endif %}
-      </div>
-
+      <button type="button" class="btn btn-sm btn-outline-danger ms-auto"
+              data-bs-toggle="modal" data-bs-target="#del{{ t.pk }}">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
     </div>
 
-    <!-- Modal plan de pago -->
-    <div class="modal fade" id="modalPlan{{ t.pk }}" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
-          <div class="modal-header" style="border-color:var(--border)">
-            <h6 class="modal-title fw-bold">
-              <i class="fa-solid fa-money-bill-wave me-1" style="color:{{ cc }}"></i>Plan de pago
-            </h6>
-            <button class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <form method="post" action="{% url 'facturacion:crear_plan' t.pk %}">
-            {% csrf_token %}
-            <div class="modal-body">
-              <div class="p-2 rounded mb-3" style="background:{{ cc }}10;border:1px solid {{ cc }}30;font-size:.82rem">
-                <strong>{{ t.servicio.nombre }}</strong><br>
-                Total: <strong>Bs {{ t.precio_acordado }}</strong>
-                &nbsp;·&nbsp; Pendiente: <strong>Bs {{ t.get_saldo_pendiente }}</strong>
-              </div>
-              <div class="mb-3">
-                <label class="form-label" style="font-size:.82rem">N° de cuotas</label>
-                <input type="number" name="cuotas" class="form-control" value="1" min="1" max="24" required>
-              </div>
-              <div>
-                <label class="form-label" style="font-size:.82rem">Primera cuota</label>
-                <input type="date" name="fecha_primera" class="form-control" required>
-              </div>
-            </div>
-            <div class="modal-footer" style="border-color:var(--border)">
-              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary btn-sm">Crear plan</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endwith %}
-    {% endfor %}
-
-  </div><!-- /col-lg-8 -->
-</div><!-- /row -->
-
-<!-- ── FAB móvil ── -->
-<button class="fab-agregar" data-bs-toggle="offcanvas" data-bs-target="#offcanvasForm"
-        aria-label="Agregar tratamiento" title="Agregar tratamiento">
-  <i class="fa-solid fa-plus"></i>
-</button>
-
-<!-- ── Offcanvas formulario (móvil) ── -->
-<div class="offcanvas offcanvas-bottom offcanvas-form" id="offcanvasForm" tabindex="-1">
-  <div class="offcanvas-header">
-    <div class="d-flex align-items-center gap-2">
-      <div style="width:34px;height:34px;border-radius:10px;
-                  background:linear-gradient(135deg,var(--accent),var(--accent-mid));
-                  display:flex;align-items:center;justify-content:center">
-        <i class="fa-solid fa-tooth" style="color:#fff;font-size:.9rem"></i>
-      </div>
-      <div>
-        <div class="fw-bold" style="font-size:.92rem">Nuevo tratamiento</div>
-        <div style="font-size:.7rem;color:var(--text-3)">{{ paciente.apellidos }} {{ paciente.nombres }}</div>
-      </div>
-    </div>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
-  <div class="offcanvas-body" id="offcanvasFormBody">
-    <!-- Form content will be cloned here by JS -->
+</div>
+
+<!-- Modal: plan de pago -->
+<div class="modal fade" id="mp{{ t.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h6 class="modal-title fw-bold">
+          <i class="fa-solid fa-money-bill-wave me-1" style="color:{{ cc }}"></i>Plan de pago — {{ t.servicio.nombre }}
+        </h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'facturacion:crear_plan' t.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="d-flex gap-3 mb-3 p-2 rounded" style="background:{{ cc }}10;border:1px solid {{ cc }}28;font-size:.82rem">
+            <div><div style="font-size:.6rem;color:var(--text-3);text-transform:uppercase">Total</div><strong>Bs {{ t.precio_acordado }}</strong></div>
+            <div><div style="font-size:.6rem;color:var(--text-3);text-transform:uppercase">Pendiente</div><strong style="color:#f87171">Bs {{ t.get_saldo_pendiente }}</strong></div>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.82rem">N° cuotas</label>
+              <input type="number" name="cuotas" class="form-control" value="1" min="1" max="24" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:.82rem">Primera cuota</label>
+              <input type="date" name="fecha_primera" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">Crear plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: eliminar -->
+<div class="modal fade" id="del{{ t.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h6 class="modal-title fw-bold" style="color:#f87171">
+          <i class="fa-solid fa-trash-can me-1"></i>Eliminar tratamiento
+        </h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:.88rem">
+        <p class="mb-1">¿Eliminar <strong>{{ t.servicio.nombre }}</strong>?</p>
+        <p class="mb-0" style="font-size:.77rem;color:var(--text-3)">Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer" style="border-color:var(--border)">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form method="post" action="{% url 'clinico:eliminar_tratamiento' t.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fa-solid fa-trash-can me-1"></i>Eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endwith %}
+{% endfor %}
+
+<!-- ════════════════════════════════════════════
+     MODAL AGREGAR TRATAMIENTO
+════════════════════════════════════════════ -->
+<div class="modal fade modal-trat" id="modalTrat" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
+                      background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+                      display:flex;align-items:center;justify-content:center;
+                      box-shadow:0 3px 10px rgba(45,184,122,.3)">
+            <i class="fa-solid fa-tooth" style="color:#fff;font-size:.85rem"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:.92rem">Nuevo tratamiento</div>
+            <div style="font-size:.7rem;color:var(--text-3)">{{ paciente.apellidos }} {{ paciente.nombres }}</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form method="post" id="formTrat" novalidate>
+          {% csrf_token %}
+
+          <!-- Servicio elegido -->
+          <div class="svc-chosen" id="svcChosen">
+            <span class="ch-dot" id="chosenDot"></span>
+            <span class="ch-name" id="chosenName"></span>
+            <span class="ch-meta" id="chosenMeta"></span>
+            <button type="button" onclick="clearSvc()"
+                    style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:0;flex-shrink:0">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Búsqueda -->
+          <div class="svc-search-wrap mb-1">
+            <i class="sicon fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="svcSearch" class="form-control form-control-sm"
+                   placeholder="Buscar servicio…" autocomplete="off">
+          </div>
+
+          <!-- Chips categoría -->
+          <div class="cat-row" id="catRow">
+            <button type="button" class="cchip on" data-cat=""
+                    style="background:var(--accent);border-color:transparent;color:#fff">Todos</button>
+            {% for group in cat_groups %}
+            {% with c=group.grouper.color|default:"#6b7280" %}
+            <button type="button" class="cchip"
+                    data-cat="{{ group.grouper.nombre|default:'Sin categoría' }}"
+                    data-color="{{ c }}">
+              <span style="width:6px;height:6px;border-radius:50%;background:{{ c }};flex-shrink:0"></span>
+              {{ group.grouper.nombre|default:"Sin categoría" }}
+            </button>
+            {% endwith %}
+            {% endfor %}
+          </div>
+
+          <!-- Lista servicios -->
+          <div class="svc-list mb-3" id="svcList">
+            {% for group in cat_groups %}
+            <div class="svc-cat-hd svc-cat-hd-el">
+              <span style="width:6px;height:6px;border-radius:50%;background:{{ group.grouper.color|default:'#6b7280' }};display:inline-block"></span>
+              {{ group.grouper.nombre|default:"Sin categoría" }}
+            </div>
+            {% for s in group.list %}
+            <div class="svc-item"
+                 data-pk="{{ s.pk }}"
+                 data-nombre="{{ s.nombre }}"
+                 data-precio="{{ s.precio|floatformat:2 }}"
+                 data-dur="{{ s.duracion_minutos }}"
+                 data-cat="{{ s.categoria.nombre|default:'' }}"
+                 data-color="{{ s.categoria.color|default:'#6b7280' }}"
+                 onclick="pickSvc(this)">
+              <span class="si-dot" style="background:{{ s.categoria.color|default:'#6b7280' }}"></span>
+              <span class="si-name">{{ s.nombre }}</span>
+              <span class="si-price">Bs {{ s.precio }}</span>
+              <span class="si-check"><i class="fa-solid fa-check fa-xs"></i></span>
+            </div>
+            {% endfor %}
+            {% endfor %}
+          </div>
+
+          <!-- Select oculto Django -->
+          <div style="display:none">{{ form.servicio }}</div>
+          {% if form.servicio.errors %}
+          <div class="text-danger mb-2" style="font-size:.78rem">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.servicio.errors.0 }}
+          </div>
+          {% endif %}
+
+          <!-- Precio -->
+          <div class="mb-3">
+            <label class="fl">
+              <i class="fa-solid fa-tag fa-xs me-1" style="color:var(--accent)"></i>Precio acordado (Bs) *
+            </label>
+            <div class="input-group">
+              <span class="input-group-text" style="font-size:.82rem;color:var(--text-2)">Bs</span>
+              {{ form.precio_acordado }}
+            </div>
+            {% if form.precio_acordado.errors %}
+            <div class="text-danger mt-1" style="font-size:.77rem">{{ form.precio_acordado.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Opciones adicionales -->
+          <button type="button" class="extras-btn" onclick="toggleExtras()">
+            <i class="fa-solid fa-sliders fa-xs"></i>
+            Opciones adicionales
+            <i class="fa-solid fa-plus fa-xs" id="extrasIcon"></i>
+          </button>
+          <div id="extrasBody">
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="fl"><i class="fa-solid fa-tooth fa-xs me-1" style="color:#a78bfa"></i>N° diente (FDI)</label>
+                {{ form.numero_diente }}
+              </div>
+              <div class="col-6">
+                <label class="fl"><i class="fa-solid fa-calendar fa-xs me-1" style="color:#06b6d4"></i>Fecha inicio</label>
+                {{ form.fecha_inicio }}
+              </div>
+            </div>
+
+            <!-- Quick picks FDI -->
+            {% for nombre_cuad, nums in diente_groups %}
+            <div style="font-size:.62rem;color:var(--text-3);margin-bottom:.18rem">{{ nombre_cuad }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:.2rem;margin-bottom:.4rem">
+              {% for n in nums %}
+              <button type="button"
+                      onclick="document.getElementById('{{ form.numero_diente.id_for_label }}').value='{{ n }}'"
+                      style="font-size:.64rem;font-weight:700;padding:.13rem .4rem;border-radius:5px;
+                             border:1px solid var(--border);background:var(--bg-base);cursor:pointer;
+                             color:var(--text-2);font-family:'Space Mono',monospace">{{ n }}</button>
+              {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="mb-3 mt-1">
+              <label class="fl"><i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>Notas</label>
+              {{ form.notas }}
+            </div>
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2 mb-2" style="font-size:.82rem">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+        </form>
+      </div><!-- /modal-body -->
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" form="formTrat" class="btn btn-primary btn-sm px-4 fw-bold">
+          <i class="fa-solid fa-plus me-1"></i>Agregar
+        </button>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -500,325 +774,124 @@
 
 {% block extra_js %}
 <script>
-const SERVICIOS = {{ servicios_json|safe }};
+/* ── Abrir modal automáticamente si hay errores ── */
+{% if form.errors %}
+document.addEventListener('DOMContentLoaded', () => {
+  new bootstrap.Modal(document.getElementById('modalTrat')).show();
+});
+{% endif %}
 
-/* ══════════════════════════════════════════════════════
-   CONSTRUCTOR DEL FORMULARIO
-   Genera el HTML del picker + campos y lo inserta en
-   el contenedor indicado (desktop sidebar o offcanvas)
-══════════════════════════════════════════════════════ */
+/* ── Resetear modal al cerrar ──────────────────── */
+document.getElementById('modalTrat').addEventListener('hidden.bs.modal', () => {
+  document.getElementById('svcSearch').value = '';
+  filterSvcs();
+  // No limpiamos el form aquí porque podría tener errores que mostrar
+});
 
-function buildForm(container, formId) {
-  const csrfToken = '{{ csrf_token }}';
-  const precioInitial = '{{ form.precio_acordado.value|default:"" }}';
-  const selectedSvc = '{{ form.servicio.value|default:"" }}';
-  const servicioFieldId = '{{ form.servicio.id_for_label }}';
-  const precioFieldId   = '{{ form.precio_acordado.id_for_label }}';
-
-  // Agrupa servicios por categoría
-  const catMap = {};
-  SERVICIOS.forEach(s => {
-    const cat = s.cat || 'Sin categoría';
-    if (!catMap[cat]) catMap[cat] = { color: s.color || '#6b7280', items: [] };
-    catMap[cat].items.push(s);
-  });
-
-  const catNames = Object.keys(catMap);
-
-  /* ── Chips de categoría ── */
-  let chipsHtml = `<div class="cat-chips mb-2" id="catChips_${formId}">
-    <button class="cat-chip active" data-cat="" type="button">Todos</button>`;
-  catNames.forEach(cat => {
-    const color = catMap[cat].color;
-    chipsHtml += `<button class="cat-chip" data-cat="${cat}" type="button"
-        style="--cc:${color}"
-        onclick="">
-      <span class="cat-chip-dot" style="background:${color}"></span>${cat}
-    </button>`;
-  });
-  chipsHtml += `</div>`;
-
-  /* ── Lista de servicios ── */
-  let svcHtml = `<div class="svc-list" id="svcList_${formId}">`;
-  catNames.forEach(cat => {
-    const color = catMap[cat].color;
-    svcHtml += `<div class="cat-group-label svc-cat-label" data-cat="${cat}">
-      <span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block"></span>${cat}
-    </div>`;
-    catMap[cat].items.forEach(s => {
-      svcHtml += `<div class="svc-item" data-pk="${s.pk}" data-precio="${s.precio}"
-          data-nombre="${s.nombre}" data-dur="${s.duracion}" data-cat="${s.cat||''}"
-          data-color="${s.color||'#6b7280'}" data-desc="${s.desc||''}"
-          onclick="selectSvcIn('${formId}',this)">
-        <span class="svc-item-dot" style="background:${s.color||'#6b7280'}"></span>
-        <div class="svc-item-name">${s.nombre}</div>
-        <span class="svc-item-price">Bs ${s.precio}</span>
-        <span class="svc-item-check"><i class="fa-solid fa-check fa-xs"></i></span>
-      </div>`;
+/* ── Chips categoría ───────────────────────────── */
+let activeCat = '';
+document.getElementById('catRow').querySelectorAll('.cchip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    activeCat = chip.dataset.cat || '';
+    document.getElementById('catRow').querySelectorAll('.cchip').forEach(c => {
+      const on = c === chip;
+      c.classList.toggle('on', on);
+      c.style.background  = on ? (c.dataset.color || 'var(--accent)') : '';
+      c.style.color       = on ? '#fff' : '';
+      c.style.borderColor = on ? 'transparent' : '';
     });
+    filterSvcs();
   });
-  svcHtml += `</div>`;
+});
 
-  /* ── Preview ── */
-  const previewHtml = `<div class="svc-preview mb-3" id="svcPreview_${formId}" style="display:none">
-    <div class="d-flex align-items-center gap-2 mb-1">
-      <span id="prevDot_${formId}" style="width:10px;height:10px;border-radius:50%;background:#6b7280;flex-shrink:0"></span>
-      <span id="prevNombre_${formId}" class="fw-bold" style="font-size:.88rem"></span>
-      <span id="prevCat_${formId}" class="ms-auto" style="font-size:.65rem;font-weight:700;padding:.15em .55em;border-radius:20px"></span>
-    </div>
-    <div class="d-flex gap-3" style="font-size:.75rem;color:var(--text-2)">
-      <span><i class="fa-solid fa-clock me-1"></i><span id="prevDur_${formId}"></span> min</span>
-      <span><i class="fa-solid fa-tag me-1"></i>Bs <span id="prevPrecio_${formId}"></span></span>
-    </div>
-    <div id="prevDesc_${formId}" style="font-size:.72rem;color:var(--text-3);font-style:italic;margin-top:.25rem"></div>
-  </div>`;
+/* ── Búsqueda ──────────────────────────────────── */
+document.getElementById('svcSearch').addEventListener('input', filterSvcs);
 
-  /* ── Dientes quick picks ── */
-  const fdiGroups = [
-    { label:'Superior der.', nums:['18','17','16','15','14','13','12','11'] },
-    { label:'Superior izq.', nums:['21','22','23','24','25','26','27','28'] },
-    { label:'Inferior der.', nums:['48','47','46','45','44','43','42','41'] },
-    { label:'Inferior izq.', nums:['31','32','33','34','35','36','37','38'] },
-  ];
-  let dienteHtml = `<div style="font-size:.72rem;color:var(--text-3);margin-bottom:.3rem">Acceso rápido FDI:</div>`;
-  fdiGroups.forEach(g => {
-    dienteHtml += `<div style="font-size:.6rem;color:var(--text-3);margin-bottom:.2rem">${g.label}</div>
-      <div class="diente-quick mb-2">`;
-    g.nums.forEach(n => {
-      dienteHtml += `<button type="button" class="diente-btn"
-          onclick="document.getElementById('dienteField_${formId}').value='${n}'">${n}</button>`;
-    });
-    dienteHtml += `</div>`;
+function filterSvcs() {
+  const q = document.getElementById('svcSearch').value.toLowerCase().trim();
+  document.querySelectorAll('.svc-item').forEach(row => {
+    const mQ = !q || row.dataset.nombre.toLowerCase().includes(q) || row.dataset.cat.toLowerCase().includes(q);
+    const mC = !activeCat || row.dataset.cat === activeCat;
+    row.style.display = mQ && mC ? '' : 'none';
   });
-
-  /* ── HTML completo del form ── */
-  const html = `
-  <form method="post" id="formTrat_${formId}" novalidate action="{% url 'clinico:tratamientos' paciente.pk %}">
-    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-
-    <!-- Servicio -->
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-                color:var(--text-3);margin-bottom:.45rem">
-      Servicio <span style="color:var(--danger)">*</span>
-    </div>
-
-    <!-- Search -->
-    <input type="text" id="svcSearch_${formId}" class="form-control form-control-sm mb-2"
-           placeholder="Buscar servicio…" autocomplete="off">
-
-    ${chipsHtml}
-    ${svcHtml}
-
-    <!-- Hidden select -->
-    <select name="servicio" id="svcHidden_${formId}" style="display:none"></select>
-
-    ${previewHtml}
-
-    <!-- Precio -->
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.8rem">
-        <i class="fa-solid fa-tag fa-xs me-1" style="color:var(--accent)"></i>
-        Precio acordado (Bs) <span style="color:var(--danger)">*</span>
-      </label>
-      <input type="number" name="precio_acordado" id="precioField_${formId}"
-             class="form-control" step="0.01" min="0"
-             value="${precioInitial}" placeholder="0.00" required>
-    </div>
-
-    <!-- Número de diente -->
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.8rem">
-        <i class="fa-solid fa-tooth fa-xs me-1" style="color:#a78bfa"></i>N° de diente (FDI)
-        <span style="font-size:.7rem;color:var(--text-3);font-weight:400;margin-left:.3rem">opcional</span>
-      </label>
-      <input type="number" name="numero_diente" id="dienteField_${formId}"
-             class="form-control" min="11" max="48" placeholder="ej. 36">
-      <div id="dienteQuick_${formId}" style="display:none;margin-top:.4rem">
-        ${dienteHtml}
-      </div>
-      <button type="button" class="btn btn-sm btn-outline-secondary mt-2" style="font-size:.7rem;padding:.2rem .5rem"
-              onclick="toggleDienteQuick('${formId}')">
-        <i class="fa-solid fa-teeth me-1"></i>Elegir en diagrama FDI
-      </button>
-    </div>
-
-    <!-- Fecha inicio -->
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.8rem">
-        <i class="fa-solid fa-calendar fa-xs me-1" style="color:#06b6d4"></i>Fecha inicio
-      </label>
-      <input type="date" name="fecha_inicio" class="form-control">
-    </div>
-
-    <!-- Notas -->
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.8rem">
-        <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>Notas
-      </label>
-      <textarea name="notas" class="form-control" rows="2" style="resize:vertical"
-                placeholder="Observaciones del tratamiento…"></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary w-100 fw-bold">
-      <i class="fa-solid fa-plus me-1"></i>Agregar tratamiento
-    </button>
-  </form>`;
-
-  container.innerHTML = html;
-
-  /* ── Bind events post-render ── */
-  bindFormEvents(formId);
-
-  /* ── Pre-seleccionar servicio si hay POST error ── */
-  if (selectedSvc) {
-    const card = container.querySelector(`.svc-item[data-pk="${selectedSvc}"]`);
-    if (card) selectSvcIn(formId, card);
-  }
-}
-
-/* ══════════════════════════════════════════════════════
-   BIND DE EVENTOS
-══════════════════════════════════════════════════════ */
-
-function bindFormEvents(formId) {
-  // Search
-  const searchEl = document.getElementById(`svcSearch_${formId}`);
-  if (searchEl) {
-    searchEl.addEventListener('input', function() {
-      filterSvcs(formId, this.value, getActiveChip(formId));
-    });
-  }
-
-  // Category chips
-  const chipsEl = document.getElementById(`catChips_${formId}`);
-  if (chipsEl) {
-    chipsEl.querySelectorAll('.cat-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        chipsEl.querySelectorAll('.cat-chip').forEach(c => {
-          c.classList.remove('active');
-          c.style.background = '';
-          c.style.color = '';
-          c.style.borderColor = '';
-        });
-        chip.classList.add('active');
-        const color = chip.style.getPropertyValue('--cc') || 'var(--accent)';
-        chip.style.background = chip.dataset.cat === '' ? 'var(--accent)' : color;
-        chip.style.color = '#fff';
-        chip.style.borderColor = 'transparent';
-        filterSvcs(formId, searchEl ? searchEl.value : '', chip.dataset.cat);
-      });
-    });
-    // Activate "Todos" chip visually
-    const todosChip = chipsEl.querySelector('.cat-chip.active');
-    if (todosChip) {
-      todosChip.style.background = 'var(--accent)';
-      todosChip.style.color = '#fff';
-      todosChip.style.borderColor = 'transparent';
+  document.querySelectorAll('.svc-cat-hd-el').forEach(hd => {
+    let sib = hd.nextElementSibling;
+    let any = false;
+    while (sib && !sib.classList.contains('svc-cat-hd-el')) {
+      if (sib.classList.contains('svc-item') && sib.style.display !== 'none') { any = true; break; }
+      sib = sib.nextElementSibling;
     }
-  }
-
-  // Precio manual → deshabilitar autofill
-  const precioEl = document.getElementById(`precioField_${formId}`);
-  if (precioEl) {
-    precioEl.addEventListener('input', function() { this.dataset.auto = '0'; });
-  }
-}
-
-function getActiveChip(formId) {
-  const active = document.querySelector(`#catChips_${formId} .cat-chip.active`);
-  return active ? active.dataset.cat : '';
-}
-
-function filterSvcs(formId, query, cat) {
-  const q = (query || '').toLowerCase();
-  const list = document.getElementById(`svcList_${formId}`);
-  if (!list) return;
-
-  list.querySelectorAll('.svc-item').forEach(item => {
-    const matchQ = !q || item.dataset.nombre.toLowerCase().includes(q) || item.dataset.cat.toLowerCase().includes(q);
-    const matchC = !cat || item.dataset.cat === cat;
-    item.style.display = matchQ && matchC ? '' : 'none';
-  });
-  list.querySelectorAll('.svc-cat-label').forEach(label => {
-    let sibling = label.nextElementSibling;
-    let allHidden = true;
-    while (sibling && !sibling.classList.contains('svc-cat-label')) {
-      if (sibling.classList.contains('svc-item') && sibling.style.display !== 'none') {
-        allHidden = false; break;
-      }
-      sibling = sibling.nextElementSibling;
-    }
-    label.style.display = allHidden ? 'none' : '';
+    hd.style.display = any ? '' : 'none';
   });
 }
 
-/* ══════════════════════════════════════════════════════
-   SELECCIONAR SERVICIO
-══════════════════════════════════════════════════════ */
+/* ── Seleccionar servicio ──────────────────────── */
+let precioModificado = false;
 
-function selectSvcIn(formId, el) {
-  const container = el.closest('form') || document.body;
-  container.querySelectorAll('.svc-item').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-
-  // Scroll into view dentro del svc-list
+function pickSvc(el) {
+  document.querySelectorAll('.svc-item').forEach(r => r.classList.remove('sel'));
+  el.classList.add('sel');
   el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
-  const { pk, precio, nombre, dur, cat, color, desc } = el.dataset;
+  const { pk, precio, nombre, dur, color } = el.dataset;
 
-  // Hidden select
-  const sel = document.getElementById(`svcHidden_${formId}`);
-  if (sel) {
-    sel.innerHTML = `<option value="${pk}" selected>${nombre}</option>`;
-    sel.value = pk;
+  /* Select oculto Django */
+  const sel = document.querySelector('select[name="servicio"]');
+  if (sel) sel.value = pk;
+
+  /* Precio: siempre copia al hacer clic en un servicio */
+  const pEl = document.getElementById('id_precio_acordado');
+  if (pEl) {
+    const val = parseFloat(String(precio).replace(',', '.'));
+    pEl.value = isNaN(val) ? '' : val;
+    precioModificado = false;
   }
 
-  // Auto-fill precio
-  const precioEl = document.getElementById(`precioField_${formId}`);
-  if (precioEl && (!precioEl.value || precioEl.dataset.auto === '1')) {
-    precioEl.value = precio;
-    precioEl.dataset.auto = '1';
-  }
-
-  // Preview
-  document.getElementById(`prevNombre_${formId}`).textContent = nombre;
-  document.getElementById(`prevDot_${formId}`).style.background = color;
-  document.getElementById(`prevCat_${formId}`).textContent = cat;
-  document.getElementById(`prevCat_${formId}`).style.background = color + '20';
-  document.getElementById(`prevCat_${formId}`).style.color = color;
-  document.getElementById(`prevDur_${formId}`).textContent = dur;
-  document.getElementById(`prevPrecio_${formId}`).textContent = precio;
-  document.getElementById(`prevDesc_${formId}`).textContent = desc || '';
-  document.getElementById(`svcPreview_${formId}`).style.display = 'block';
+  /* Banner servicio elegido */
+  document.getElementById('chosenDot').style.background = color;
+  document.getElementById('chosenName').textContent = nombre;
+  document.getElementById('chosenMeta').textContent = `${dur} min · Bs ${precio}`;
+  document.getElementById('svcChosen').classList.add('show');
 }
 
-/* ══════════════════════════════════════════════════════
-   TOGGLE DIAGRAMA FDI
-══════════════════════════════════════════════════════ */
-
-function toggleDienteQuick(formId) {
-  const el = document.getElementById(`dienteQuick_${formId}`);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+function clearSvc() {
+  document.querySelectorAll('.svc-item').forEach(r => r.classList.remove('sel'));
+  const sel = document.querySelector('select[name="servicio"]');
+  if (sel) sel.value = '';
+  const pEl = document.getElementById('id_precio_acordado');
+  if (pEl) pEl.value = '';
+  precioModificado = false;
+  document.getElementById('svcChosen').classList.remove('show');
 }
 
-/* ══════════════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════════════ */
-
-// Desktop sidebar
-const desktopContainer = document.getElementById('formColDesktop');
-if (desktopContainer) buildForm(desktopContainer, 'desktop');
-
-// Offcanvas (móvil) — construir al abrir para no duplicar IDs
-const offcanvasEl = document.getElementById('offcanvasForm');
-if (offcanvasEl) {
-  let offcanvasBuilt = false;
-  offcanvasEl.addEventListener('show.bs.offcanvas', () => {
-    if (!offcanvasBuilt) {
-      buildForm(document.getElementById('offcanvasFormBody'), 'mobile');
-      offcanvasBuilt = true;
-    }
+document.getElementById('id_precio_acordado')
+  ?.addEventListener('input', function() {
+    precioModificado = this.value.trim() !== '';
   });
+
+/* Pre-seleccionar si vuelve por error */
+(function() {
+  const sel = document.querySelector('select[name="servicio"]');
+  if (sel && sel.value) {
+    precioModificado = true;
+    const row = document.querySelector(`.svc-item[data-pk="${sel.value}"]`);
+    if (row) {
+      row.classList.add('sel');
+      const { color, nombre, dur, precio } = row.dataset;
+      document.getElementById('chosenDot').style.background = color;
+      document.getElementById('chosenName').textContent = nombre;
+      document.getElementById('chosenMeta').textContent = `${dur} min · Bs ${precio}`;
+      document.getElementById('svcChosen').classList.add('show');
+    }
+  }
+})();
+
+/* ── Extras ────────────────────────────────────── */
+function toggleExtras() {
+  const body = document.getElementById('extrasBody');
+  const icon = document.getElementById('extrasIcon');
+  const open = body.classList.toggle('open');
+  icon.className = open ? 'fa-solid fa-minus fa-xs' : 'fa-solid fa-plus fa-xs';
 }
 </script>
 {% endblock %}

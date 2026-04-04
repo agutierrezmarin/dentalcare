@@ -8,6 +8,7 @@
 
 {% block extra_css %}
 <style>
+/* ══ Print ═══════════════════════════════════════════ */
 @media print {
   .sidebar, .topbar, .no-print, nav, header, .breadcrumb-area { display: none !important; }
   .main-content, body > * { margin: 0 !important; padding: 0 !important; }
@@ -20,9 +21,12 @@
   .total-section { background: #f8f9fa !important;
                    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .item-table tr { page-break-inside: avoid; }
+  .items-mobile { display: none !important; }
+  .items-desktop { display: table !important; }
   @page { margin: 1.5cm 1.8cm; size: A4 portrait; }
 }
 
+/* ══ Doc shell ═══════════════════════════════════════ */
 .print-doc {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -32,73 +36,112 @@
 }
 .doc-header-accent {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
-  padding: 1.75rem 2rem 1.5rem;
+  padding: 1.5rem 1.75rem 1.25rem;
   color: white;
 }
-.doc-body { padding: 1.75rem 2rem; }
-.doc-divider { border-color: var(--border); margin: 1.25rem 0; }
+.doc-body { padding: 1.5rem 1.75rem; }
+
+/* ══ Typography helpers ══════════════════════════════ */
 .section-lbl {
-  font-size: .68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--text-3); margin-bottom: .5rem;
+  font-size: .67rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text-3); margin-bottom: .45rem;
 }
+.doc-divider { border-color: var(--border); margin: 1rem 0; }
+
+/* ══ Desktop table ═══════════════════════════════════ */
 .item-table th {
-  font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
   color: var(--text-2); font-weight: 600; border-bottom: 2px solid var(--border);
-  padding: .55rem .5rem;
+  padding: .5rem .45rem;
 }
-.item-table td { padding: .6rem .5rem; vertical-align: middle; border-color: var(--border); }
+.item-table td { padding: .55rem .45rem; vertical-align: middle; border-color: var(--border); }
 .cat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block;
            margin-right: .3rem; flex-shrink: 0; vertical-align: middle; }
 .disc-badge {
-  display: inline-block; font-size: .65rem; font-weight: 700;
-  padding: .1em .5em; border-radius: 10px;
+  display: inline-block; font-size: .64rem; font-weight: 700;
+  padding: .1em .45em; border-radius: 10px;
   background: #f8717118; color: #f87171; border: 1px solid #f8717130;
 }
-.total-box { background: var(--bg-surface); border-radius: 10px; padding: 1rem 1.2rem; }
-.t-row { display: flex; justify-content: space-between; padding: .3rem 0; font-size: .88rem; }
-.t-row.final { font-size: 1.1rem; font-weight: 800;
-               border-top: 2px solid var(--border); padding-top: .6rem; margin-top: .35rem; }
-.validity-note { margin-top: 1.75rem; padding-top: 1rem; border-top: 1px solid var(--border);
-                 font-size: .73rem; color: var(--text-3); text-align: center; }
-/* Estado badges */
-.est-badge { padding: .25em .8em; border-radius: 20px; font-size: .75rem; font-weight: 700; }
+
+/* ══ Mobile item cards ═══════════════════════════════ */
+.item-mob-card {
+  border: 1px solid var(--border-light);
+  border-radius: 8px; padding: .6rem .75rem;
+  background: var(--bg-surface);
+}
+.item-mob-row {
+  display: flex; justify-content: space-between;
+  align-items: center; font-size: .82rem;
+}
+
+/* ══ Totales ══════════════════════════════════════════ */
+.total-box { background: var(--bg-surface); border-radius: 10px; padding: .85rem 1rem; }
+.t-row { display: flex; justify-content: space-between; padding: .28rem 0; font-size: .87rem; }
+.t-row.final { font-size: 1.05rem; font-weight: 800;
+               border-top: 2px solid var(--border); padding-top: .55rem; margin-top: .3rem; }
+
+/* ══ Estado ══════════════════════════════════════════ */
+.est-badge {
+  padding: .25em .8em; border-radius: 20px;
+  font-size: .73rem; font-weight: 700;
+  display: inline-flex; align-items: center; gap: .3rem;
+}
+.validity-note {
+  margin-top: 1.5rem; padding-top: .9rem; border-top: 1px solid var(--border);
+  font-size: .72rem; color: var(--text-3); text-align: center;
+}
+
+/* ══ Mobile tweaks ═══════════════════════════════════ */
+@media (max-width: 575px) {
+  .doc-header-accent { padding: 1.1rem 1.1rem .9rem; }
+  .doc-body { padding: 1rem 1rem; }
+  .doc-header-title { font-size: 1.1rem !important; }
+  .doc-header-num  { font-size: 1.3rem !important; }
+  .info-cols { flex-direction: column; gap: .65rem; }
+  .info-col-right { text-align: left !important; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── Barra de acciones (solo pantalla) ─────────────────────────────────── -->
-<div class="no-print d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-  <!-- Izquierda: volver + estado -->
-  <div class="d-flex align-items-center gap-2 flex-wrap">
-    <a href="{% url 'pacientes:detalle' presupuesto.paciente.pk %}"
-       class="btn btn-outline-secondary btn-sm">
-      <i class="fa-solid fa-arrow-left me-1"></i>Volver
-    </a>
-    {% if presupuesto.estado == 'borrador' %}
-    <span class="est-badge" style="background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa40">Borrador</span>
-    {% elif presupuesto.estado == 'enviado' %}
-    <span class="est-badge" style="background:#4e9ff520;color:#4e9ff5;border:1px solid #4e9ff540">
-      <i class="fa-solid fa-paper-plane me-1"></i>Enviado
-    </span>
-    {% elif presupuesto.estado == 'aceptado' %}
-    <span class="est-badge" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40">
-      <i class="fa-solid fa-circle-check me-1"></i>Aceptado
-    </span>
-    {% elif presupuesto.estado == 'rechazado' %}
-    <span class="est-badge" style="background:#f8717120;color:#f87171;border:1px solid #f8717140">
-      <i class="fa-solid fa-xmark me-1"></i>Rechazado
-    </span>
-    {% endif %}
+<!-- ══ Barra de acciones (solo pantalla) ═════════════ -->
+<div class="no-print mb-3">
+  <!-- Fila superior: Volver + estado + Imprimir -->
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'pacientes:detalle' presupuesto.paciente.pk %}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i>Volver
+      </a>
+      {% if presupuesto.estado == 'borrador' %}
+      <span class="est-badge" style="background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa40">
+        <i class="fa-solid fa-pencil" style="font-size:.65rem"></i>Borrador
+      </span>
+      {% elif presupuesto.estado == 'enviado' %}
+      <span class="est-badge" style="background:#4e9ff520;color:#4e9ff5;border:1px solid #4e9ff540">
+        <i class="fa-solid fa-paper-plane" style="font-size:.65rem"></i>Enviado
+      </span>
+      {% elif presupuesto.estado == 'aceptado' %}
+      <span class="est-badge" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40">
+        <i class="fa-solid fa-circle-check" style="font-size:.65rem"></i>Aceptado
+      </span>
+      {% elif presupuesto.estado == 'rechazado' %}
+      <span class="est-badge" style="background:#f8717120;color:#f87171;border:1px solid #f8717140">
+        <i class="fa-solid fa-xmark" style="font-size:.65rem"></i>Rechazado
+      </span>
+      {% endif %}
+    </div>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="fa-solid fa-print me-1"></i><span class="d-none d-sm-inline">Imprimir / </span>PDF
+    </button>
   </div>
 
-  <!-- Derecha: acciones -->
+  <!-- Fila inferior: cambios de estado (solo si aplica) -->
+  {% if presupuesto.estado == 'borrador' or presupuesto.estado == 'enviado' %}
   <div class="d-flex gap-2 flex-wrap">
-    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
-      <i class="fa-solid fa-print me-1"></i>Imprimir / Guardar PDF
-    </button>
     {% if presupuesto.estado == 'borrador' %}
-    <form method="post">
+    <form method="post" class="m-0">
       {% csrf_token %}
       <input type="hidden" name="accion" value="enviado">
       <button class="btn btn-outline-secondary btn-sm">
@@ -106,26 +149,25 @@
       </button>
     </form>
     {% endif %}
-    {% if presupuesto.estado == 'borrador' or presupuesto.estado == 'enviado' %}
-    <form method="post">
+    <form method="post" class="m-0">
       {% csrf_token %}
       <input type="hidden" name="accion" value="aceptado">
       <button class="btn btn-success btn-sm">
         <i class="fa-solid fa-circle-check me-1"></i>Paciente aceptó
       </button>
     </form>
-    <form method="post">
+    <form method="post" class="m-0">
       {% csrf_token %}
       <input type="hidden" name="accion" value="rechazado">
       <button class="btn btn-outline-danger btn-sm">
         <i class="fa-solid fa-xmark me-1"></i>Rechazado
       </button>
     </form>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
 
-<!-- ── Documento ─────────────────────────────────────────────────────────── -->
+<!-- ══ Documento ═════════════════════════════════════ -->
 <div class="row justify-content-center">
   <div class="col-12 col-lg-9 col-xl-8">
     <div class="print-doc">
@@ -134,17 +176,18 @@
       <div class="doc-header-accent">
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
           <div>
-            <div style="font-size:1.3rem;font-weight:800;letter-spacing:-.01em">
+            <div class="doc-header-title" style="font-size:1.25rem;font-weight:800;letter-spacing:-.01em">
               <i class="fa-solid fa-tooth me-2" style="color:#22d3ee"></i>DentalCare
             </div>
-            <div style="font-size:.78rem;opacity:.6;margin-top:.15rem">Sistema de Gestión Dental</div>
+            <div style="font-size:.75rem;opacity:.6;margin-top:.1rem">Sistema de Gestión Dental</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:.65rem;opacity:.55;text-transform:uppercase;letter-spacing:.1em">Presupuesto</div>
-            <div style="font-size:1.6rem;font-weight:900;letter-spacing:-.02em;line-height:1">#{{ presupuesto.pk }}</div>
-            <div style="font-size:.8rem;opacity:.7;margin-top:.2rem">{{ presupuesto.fecha|date:"d/m/Y" }}</div>
-            <!-- Estado visible en print -->
-            <div style="font-size:.7rem;opacity:.8;margin-top:.3rem;font-weight:600;text-transform:uppercase">
+            <div style="font-size:.63rem;opacity:.55;text-transform:uppercase;letter-spacing:.1em">Presupuesto</div>
+            <div class="doc-header-num" style="font-size:1.5rem;font-weight:900;letter-spacing:-.02em;line-height:1">
+              #{{ presupuesto.pk }}
+            </div>
+            <div style="font-size:.78rem;opacity:.7;margin-top:.2rem">{{ presupuesto.fecha|date:"d/m/Y" }}</div>
+            <div style="font-size:.68rem;opacity:.8;margin-top:.2rem;font-weight:600;text-transform:uppercase">
               {{ presupuesto.get_estado_display }}
             </div>
           </div>
@@ -154,88 +197,125 @@
       <!-- Cuerpo -->
       <div class="doc-body">
 
-        <!-- Paciente + Doctor -->
-        <div class="row mb-3">
-          <div class="col-6">
+        <!-- Paciente + Odontólogo -->
+        <div class="d-flex justify-content-between align-items-start gap-3 info-cols mb-3">
+          <div>
             <div class="section-lbl">Paciente</div>
-            <div style="font-weight:700;font-size:.98rem">{{ presupuesto.paciente }}</div>
+            <div style="font-weight:700;font-size:.95rem">{{ presupuesto.paciente }}</div>
             {% if presupuesto.paciente.telefono %}
-            <div style="font-size:.8rem;color:var(--text-2)">
-              <i class="fa-solid fa-phone fa-fw" style="font-size:.72rem"></i> {{ presupuesto.paciente.telefono }}
+            <div style="font-size:.78rem;color:var(--text-2);margin-top:.15rem">
+              <i class="fa-solid fa-phone fa-fw" style="font-size:.7rem"></i> {{ presupuesto.paciente.telefono }}
             </div>
             {% endif %}
             {% if presupuesto.paciente.ci %}
-            <div style="font-size:.8rem;color:var(--text-2)">
-              <i class="fa-solid fa-id-card fa-fw" style="font-size:.72rem"></i> CI: {{ presupuesto.paciente.ci }}
+            <div style="font-size:.78rem;color:var(--text-2)">
+              <i class="fa-solid fa-id-card fa-fw" style="font-size:.7rem"></i> CI: {{ presupuesto.paciente.ci }}
             </div>
             {% endif %}
           </div>
-          <div class="col-6" style="text-align:right">
+          <div class="info-col-right" style="text-align:right">
             <div class="section-lbl">Odontólogo</div>
-            <div style="font-weight:700;font-size:.95rem">
+            <div style="font-weight:700;font-size:.9rem">
               Dr. {{ presupuesto.doctor.get_full_name|default:presupuesto.doctor.username }}
             </div>
             {% if presupuesto.doctor.perfil.especialidad %}
-            <div style="font-size:.78rem;color:var(--text-2)">{{ presupuesto.doctor.perfil.especialidad }}</div>
+            <div style="font-size:.75rem;color:var(--text-2)">{{ presupuesto.doctor.perfil.especialidad }}</div>
             {% endif %}
           </div>
         </div>
 
         <hr class="doc-divider">
 
-        <!-- Servicios -->
+        <!-- Servicios — tabla desktop -->
         <div class="section-lbl">Servicios incluidos</div>
-        <table class="table item-table mb-0">
-          <thead>
-            <tr>
-              <th>Descripción</th>
-              <th class="text-center" style="width:72px">Diente</th>
-              <th class="text-center" style="width:52px">Cant.</th>
-              <th class="text-end" style="width:108px">P. Unit.</th>
-              <th class="text-center" style="width:72px">Desc.</th>
-              <th class="text-end" style="width:108px">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in presupuesto.items.select_related %}
-            <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:.35rem">
-                  {% if item.servicio.categoria %}
-                  <span class="cat-dot"
-                        style="background:{{ item.servicio.categoria.color|default:'#6b7280' }}"></span>
-                  {% endif %}
-                  <div>
-                    <div style="font-weight:600;font-size:.87rem">{{ item.servicio.nombre }}</div>
+
+        <div class="items-desktop d-none d-sm-block">
+          <table class="table item-table mb-0">
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th class="text-center" style="width:70px">Diente</th>
+                <th class="text-center" style="width:50px">Cant.</th>
+                <th class="text-end" style="width:105px">P. Unit.</th>
+                <th class="text-center" style="width:70px">Desc.</th>
+                <th class="text-end" style="width:105px">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in presupuesto.items.select_related %}
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:.35rem">
                     {% if item.servicio.categoria %}
-                    <div style="font-size:.7rem;color:var(--text-3)">{{ item.servicio.categoria.nombre }}</div>
+                    <span class="cat-dot" style="background:{{ item.servicio.categoria.color|default:'#6b7280' }}"></span>
                     {% endif %}
+                    <div>
+                      <div style="font-weight:600;font-size:.85rem">{{ item.servicio.nombre }}</div>
+                      {% if item.servicio.categoria %}
+                      <div style="font-size:.68rem;color:var(--text-3)">{{ item.servicio.categoria.nombre }}</div>
+                      {% endif %}
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td class="text-center" style="font-family:'Space Mono',monospace;font-size:.82rem">
-                {{ item.numero_diente|default:"—" }}
-              </td>
-              <td class="text-center" style="font-size:.87rem">{{ item.cantidad }}</td>
-              <td class="text-end" style="font-size:.87rem">Bs {{ item.precio_unitario }}</td>
-              <td class="text-center">
-                {% if item.descuento > 0 %}
-                <span class="disc-badge">−{{ item.descuento }}%</span>
-                {% else %}
-                <span style="color:var(--text-3);font-size:.78rem">—</span>
+                </td>
+                <td class="text-center" style="font-family:'Space Mono',monospace;font-size:.8rem">
+                  {{ item.numero_diente|default:"—" }}
+                </td>
+                <td class="text-center" style="font-size:.85rem">{{ item.cantidad }}</td>
+                <td class="text-end" style="font-size:.85rem">Bs {{ item.precio_unitario }}</td>
+                <td class="text-center">
+                  {% if item.descuento > 0 %}
+                  <span class="disc-badge">−{{ item.descuento }}%</span>
+                  {% else %}
+                  <span style="color:var(--text-3);font-size:.75rem">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-end fw-bold" style="font-size:.88rem">Bs {{ item.subtotal|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4" style="color:var(--text-3);font-style:italic;font-size:.82rem">
+                  Los servicios se detallarán en la consulta
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Servicios — tarjetas mobile -->
+        <div class="items-mobile d-sm-none d-flex flex-column gap-2">
+          {% for item in presupuesto.items.select_related %}
+          <div class="item-mob-card">
+            <div class="item-mob-row mb-1">
+              <div style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem">
+                {% if item.servicio.categoria %}
+                <span class="cat-dot" style="background:{{ item.servicio.categoria.color|default:'#6b7280' }}"></span>
                 {% endif %}
-              </td>
-              <td class="text-end fw-bold" style="font-size:.9rem">Bs {{ item.subtotal|floatformat:2 }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center py-4" style="color:var(--text-3);font-style:italic">
-                Los servicios se detallarán en la consulta
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                {{ item.servicio.nombre }}
+              </div>
+              <span class="fw-bold" style="color:var(--accent);font-size:.9rem;flex-shrink:0;margin-left:.5rem">
+                Bs {{ item.subtotal|floatformat:2 }}
+              </span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.3rem .8rem;font-size:.72rem;color:var(--text-3)">
+              {% if item.servicio.categoria %}
+              <span><i class="fa-solid fa-tag fa-fw"></i>{{ item.servicio.categoria.nombre }}</span>
+              {% endif %}
+              {% if item.numero_diente %}
+              <span><i class="fa-solid fa-tooth fa-fw"></i>Diente {{ item.numero_diente }}</span>
+              {% endif %}
+              <span><i class="fa-solid fa-hashtag fa-fw"></i>{{ item.cantidad }} × Bs {{ item.precio_unitario }}</span>
+              {% if item.descuento > 0 %}
+              <span class="disc-badge">−{{ item.descuento }}%</span>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center py-3" style="color:var(--text-3);font-style:italic;font-size:.82rem">
+            Los servicios se detallarán en la consulta
+          </div>
+          {% endfor %}
+        </div>
 
         <hr class="doc-divider">
 
@@ -250,7 +330,7 @@
               </div>
               {% if presupuesto.descuento_global > 0 %}
               <div class="t-row" style="color:#f87171">
-                <span>Descuento global ({{ presupuesto.descuento_global }}%)</span>
+                <span>Desc. global ({{ presupuesto.descuento_global }}%)</span>
                 <span>− Bs {{ presupuesto.descuento_monto|floatformat:2 }}</span>
               </div>
               {% endif %}
@@ -267,13 +347,13 @@
         {% if presupuesto.notas %}
         <hr class="doc-divider">
         <div class="section-lbl">Observaciones</div>
-        <div style="font-size:.85rem;color:var(--text-2);line-height:1.65">{{ presupuesto.notas }}</div>
+        <div style="font-size:.83rem;color:var(--text-2);line-height:1.65">{{ presupuesto.notas }}</div>
         {% endif %}
 
-        <!-- Pie de página / validez -->
+        <!-- Pie de validez -->
         <div class="validity-note">
           <i class="fa-solid fa-circle-info me-1"></i>
-          Este presupuesto tiene validez de <strong>30 días</strong> a partir de la fecha de emisión.
+          Este presupuesto tiene validez de <strong>30 días</strong> desde la fecha de emisión.
           Los precios pueden variar según el diagnóstico definitivo del profesional tratante.
         </div>
 
@@ -282,11 +362,10 @@
   </div>
 </div>
 
-<!-- Instrucción de guardado como PDF (solo pantalla) -->
-<div class="no-print text-center mt-3" style="font-size:.75rem;color:var(--text-3)">
+<!-- Instrucción PDF (solo pantalla) -->
+<div class="no-print text-center mt-3" style="font-size:.73rem;color:var(--text-3)">
   <i class="fa-solid fa-lightbulb me-1" style="color:#f59e0b"></i>
-  Para guardar como PDF: haz clic en <strong>Imprimir / Guardar PDF</strong> → elige destino
-  <strong>"Guardar como PDF"</strong> en el diálogo de impresión.
+  Para guardar como PDF: <strong>Imprimir / PDF</strong> → destino <strong>"Guardar como PDF"</strong>.
 </div>
 
 {% endblock %}

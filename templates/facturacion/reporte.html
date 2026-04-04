@@ -2,211 +2,762 @@
 {% block title %}Reportes Financieros{% endblock %}
 {% block breadcrumb %}Finanzas / Reportes{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ══ Stats ════════════════════════════════════════════ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .6rem; margin-bottom: 1rem;
+}
+.kpi-card {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius); padding: 1rem .75rem;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: .5rem;
+  transition: box-shadow .15s;
+}
+.kpi-card:hover { box-shadow: var(--shadow); }
+.kpi-icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+.kpi-val { font-size: 1.25rem; font-weight: 800; line-height: 1; }
+.kpi-lbl { font-size: .62rem; color: var(--text-3); text-transform: uppercase;
+           letter-spacing: .06em; }
+
+/* ══ Period pills ════════════════════════════════════ */
+.period-pills {
+  display: flex; gap: .4rem; padding: .2rem;
+  background: var(--bg-base); border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+.period-pill {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  padding: .55em .9em; border-radius: 9px; cursor: pointer;
+  font-size: .72rem; font-weight: 600; color: var(--text-2);
+  border: none; background: transparent; transition: all .15s;
+  min-width: 58px;
+}
+.period-pill i { font-size: 1.05rem; }
+.period-pill.on {
+  background: var(--bg-surface); color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  border: 1px solid var(--border-light);
+}
+
+/* ══ Tab pills ═══════════════════════════════════════ */
+.tab-pills {
+  display: flex; gap: .4rem; overflow-x: auto;
+  scrollbar-width: none; padding-bottom: .15rem;
+}
+.tab-pills::-webkit-scrollbar { display: none; }
+.tab-pill {
+  display: flex; flex-direction: column; align-items: center; gap: .3rem;
+  padding: .65em 1.1em; border-radius: 12px; cursor: pointer;
+  font-size: .72rem; font-weight: 600; white-space: nowrap;
+  border: 1.5px solid var(--border); background: var(--bg-base);
+  color: var(--text-2); transition: all .12s; flex-shrink: 0;
+  min-width: 68px;
+}
+.tab-pill i { font-size: 1.1rem; }
+.tab-pill .tab-count { font-size: .65rem; opacity: .65; font-weight: 400; }
+.tab-pill.on { color: #fff; border-color: transparent; background: var(--accent); }
+.tab-pill.on .tab-count { opacity: .8; }
+
+/* ══ Table tweaks ════════════════════════════════════ */
+.rep-table th {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-2); font-weight: 600; white-space: nowrap;
+  border-bottom: 2px solid var(--border); padding: .5rem .65rem;
+}
+.rep-table td { padding: .55rem .65rem; vertical-align: middle;
+                border-color: var(--border); font-size: .84rem; }
+.rep-table tbody tr { cursor: pointer; transition: background .1s; }
+.rep-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, var(--bg-surface)); }
+
+/* ══ Badge estado ════════════════════════════════════ */
+.bdg { display:inline-flex; align-items:center; gap:.25rem;
+       font-size:.68rem; font-weight:700; padding:.15em .55em;
+       border-radius:20px; }
+.bdg-ok  { background:#22c55e18;color:#22c55e;border:1px solid #22c55e30; }
+.bdg-warn{ background:#f8717118;color:#f87171;border:1px solid #f8717130; }
+.bdg-pend{ background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b30; }
+
+/* ══ Modal ═══════════════════════════════════════════ */
+.modal-content {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+.modal-header { border-bottom-color: var(--border); }
+.modal-footer { border-top-color: var(--border); }
+.det-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .4rem 0; border-bottom: 1px solid var(--border-light);
+  font-size: .84rem;
+}
+.det-row:last-child { border-bottom: none; }
+.det-lbl { color: var(--text-3); font-size: .75rem; }
+
+/* ══ Empty ═══════════════════════════════════════════ */
+.tbl-empty {
+  padding: 2.5rem 1rem; text-align: center;
+  color: var(--text-3); font-size: .82rem;
+}
+
+/* ══ Export btn ══════════════════════════════════════ */
+.btn-excel {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .38rem .85rem; border-radius: 8px; font-size: .8rem;
+  font-weight: 600; cursor: pointer;
+  background: #16a34a18; color: #16a34a;
+  border: 1.5px solid #16a34a40;
+  transition: background .15s, border-color .15s;
+}
+.btn-excel:hover { background: #16a34a28; border-color: #16a34a80; }
+.btn-excel-lg {
+  gap: .75rem; padding: .75rem 1.5rem;
+  border-radius: 12px; font-size: .88rem;
+  width: 100%; max-width: 340px;
+  justify-content: center;
+}
+
+/* ══ Botón "Ver gráfico" en móvil ════════════════════ */
+.btn-chart-mob {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: .75rem 1rem;
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius); cursor: pointer; color: var(--text-1);
+  font-weight: 600; font-size: .88rem;
+  transition: border-color .15s;
+}
+.btn-chart-mob:hover { border-color: var(--accent); }
+.btn-chart-mob .chart-preview {
+  display: flex; gap: 3px; align-items: flex-end; height: 28px;
+}
+.btn-chart-mob .bar {
+  width: 6px; border-radius: 2px 2px 0 0;
+  background: linear-gradient(to top,#4e9ff560,#4e9ff5);
+}
+
+/* ══ Responsive ══════════════════════════════════════ */
+@media (max-width: 767px) {
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: .4rem; }
+  .kpi-card { padding: .7rem .4rem; gap: .35rem; }
+  .kpi-icon { width: 38px; height: 38px; font-size: 1rem; border-radius: 10px; }
+  .kpi-val  { font-size: 1rem; }
+  .kpi-lbl  { font-size: .58rem; }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: .4rem; }
+  .kpi-card { padding: .85rem .6rem; }
+  .kpi-icon { width: 42px; height: 42px; font-size: 1.1rem; }
+  .kpi-val  { font-size: 1.1rem; }
+  .period-pill { min-width: 52px; padding: .5em .6em; }
+  .tab-pill    { min-width: 62px; padding: .6em .75em; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold mb-0">Reportes Financieros</h4>
-  <a href="{% url 'facturacion:pago' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus me-1"></i>Registrar pago
+
+<!-- ══ Encabezado ═════════════════════════════════════ -->
+<div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+  <div class="d-flex align-items-center gap-2">
+    <div style="width:40px;height:40px;border-radius:11px;flex-shrink:0;
+                background:linear-gradient(135deg,#4e9ff5,#818cf8);
+                display:flex;align-items:center;justify-content:center;
+                color:#fff;font-size:1.1rem;box-shadow:0 4px 14px rgba(78,159,245,.3)">
+      <i class="fa-solid fa-chart-line"></i>
+    </div>
+    <div>
+      <h5 class="fw-bold mb-0">Reportes Financieros</h5>
+      <div style="font-size:.73rem;color:var(--text-3)">{{ hoy|date:"F Y" }}</div>
+    </div>
+  </div>
+  <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left me-1"></i>Volver
   </a>
 </div>
 
-<!-- KPIs -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-icon success"><i class="bi bi-cash-stack"></i></div>
-      <div>
-        <div class="stat-value">Bs {{ total_mes|floatformat:0 }}</div>
-        <div class="stat-label">Ingresos del mes</div>
-      </div>
+<!-- ══ KPIs ══════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:#4e9ff518;color:#4e9ff5">
+      <i class="fa-solid fa-calendar-day"></i>
+    </div>
+    <div>
+      <div class="kpi-val">Bs {{ total_mes|floatformat:0 }}</div>
+      <div class="kpi-lbl">Ingresos del mes</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-icon danger"><i class="bi bi-exclamation-circle"></i></div>
-      <div>
-        <div class="stat-value">Bs {{ total_deudas|floatformat:0 }}</div>
-        <div class="stat-label">Deudas pendientes</div>
-      </div>
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:#22c55e18;color:#22c55e">
+      <i class="fa-solid fa-circle-dollar-to-slot"></i>
+    </div>
+    <div>
+      <div class="kpi-val">Bs {{ total_anio|floatformat:0 }}</div>
+      <div class="kpi-lbl">Ingresos del año</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-icon warning"><i class="bi bi-receipt"></i></div>
-      <div>
-        <div class="stat-value">{{ pagos_mes.count }}</div>
-        <div class="stat-label">Pagos este mes</div>
-      </div>
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:#a78bfa18;color:#a78bfa">
+      <i class="fa-solid fa-users"></i>
+    </div>
+    <div>
+      <div class="kpi-val">{{ pacientes_mes }}</div>
+      <div class="kpi-lbl">Pacientes (mes)</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-icon accent"><i class="bi bi-people"></i></div>
-      <div>
-        <div class="stat-value">{{ deudas.count }}</div>
-        <div class="stat-label">Cuotas vencidas/pend.</div>
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:#f8717118;color:#f87171">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div>
+      <div class="kpi-val">Bs {{ total_deudas|floatformat:0 }}</div>
+      <div class="kpi-lbl">Deudas pendientes</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Gráfico — desktop ══════════════════════════════ -->
+<div class="card mb-3 d-none d-sm-block">
+  <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+    <span><i class="fa-solid fa-chart-bar me-1" style="color:#4e9ff5"></i>Ingresos por período</span>
+    <div class="period-pills" id="periodPillsDesktop">
+      <button class="period-pill on" data-period="mes" onclick="switchPeriod(this,'desktop')">
+        <i class="fa-solid fa-calendar-days"></i>Meses
+      </button>
+      <button class="period-pill" data-period="dia" onclick="switchPeriod(this,'desktop')">
+        <i class="fa-solid fa-calendar-day"></i>Días
+      </button>
+      <button class="period-pill" data-period="año" onclick="switchPeriod(this,'desktop')">
+        <i class="fa-solid fa-calendar"></i>Años
+      </button>
+    </div>
+  </div>
+  <div class="card-body" style="padding:.75rem">
+    <canvas id="chartIngresos" style="max-height:220px"></canvas>
+  </div>
+</div>
+
+<!-- ══ Gráfico — botón móvil (< sm) ══════════════════ -->
+<div class="d-sm-none mb-3">
+  <button class="btn-chart-mob" data-bs-toggle="modal" data-bs-target="#modalChart">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fa-solid fa-chart-bar" style="color:#4e9ff5;font-size:1.1rem"></i>
+      <div style="text-align:left">
+        <div>Ver gráfico de ingresos</div>
+        <div style="font-size:.7rem;color:var(--text-3);font-weight:400">Toca para abrir · últimos 12 meses</div>
+      </div>
+    </div>
+    <div class="chart-preview">
+      <div class="bar" style="height:40%"></div>
+      <div class="bar" style="height:65%"></div>
+      <div class="bar" style="height:50%"></div>
+      <div class="bar" style="height:80%"></div>
+      <div class="bar" style="height:55%"></div>
+      <div class="bar" style="height:100%"></div>
+    </div>
+  </button>
+</div>
+
+<!-- ══ Tablas ═════════════════════════════════════════ -->
+<div class="card">
+  <!-- Tab pills -->
+  <div class="card-header">
+    <div class="tab-pills" id="tabPills">
+      <button class="tab-pill on" data-tab="pagos" onclick="switchTab(this)">
+        <i class="fa-solid fa-receipt"></i>
+        Pagos del mes
+        <span class="tab-count">({{ pagos_mes.count }})</span>
+      </button>
+      <button class="tab-pill" data-tab="doctor" onclick="switchTab(this)">
+        <i class="fa-solid fa-user-doctor"></i>
+        Por dentista
+      </button>
+      <button class="tab-pill" data-tab="metodo" onclick="switchTab(this)">
+        <i class="fa-solid fa-credit-card"></i>
+        Por método
+      </button>
+      <button class="tab-pill" data-tab="deudas" onclick="switchTab(this)">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Cuotas
+        <span class="tab-count">({{ deudas.count }})</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+
+    <!-- ── Tab: Pagos del mes ── -->
+    <div id="tab-pagos" class="tab-content">
+      <div class="table-responsive">
+        <table class="table rep-table table-mobile mb-0" id="tbl-pagos">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Paciente</th>
+              <th>Concepto</th>
+              <th>Método</th>
+              <th>Doctor</th>
+              <th class="text-end">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pagos_mes %}
+            <tr onclick="openPagoModal({{ p.pk }},
+              '{{ p.fecha|date:"d/m/Y" }}',
+              '{{ p.paciente|escapejs }}',
+              '{{ p.concepto|escapejs }}',
+              '{{ p.metodo_pago|default:"—"|escapejs }}',
+              '{% if p.doctor %}{{ p.doctor.get_full_name|default:p.doctor.username|escapejs }}{% else %}—{% endif %}',
+              '{{ p.monto|floatformat:2 }}',
+              '{{ p.notas|escapejs }}',
+              '{{ p.numero_recibo|escapejs }}'
+            )">
+              <td data-label="Fecha" style="font-family:'Space Mono',monospace;font-size:.8rem;white-space:nowrap">{{ p.fecha|date:"d/m/Y" }}</td>
+              <td data-label="Paciente" style="font-weight:500">{{ p.paciente }}</td>
+              <td data-label="Concepto" style="color:var(--text-2)">{{ p.concepto }}</td>
+              <td data-label="Método">{{ p.metodo_pago|default:"—" }}</td>
+              <td data-label="Doctor" style="color:var(--text-2)">
+                {% if p.doctor %}{{ p.doctor.get_full_name|default:p.doctor.username }}{% else %}—{% endif %}
+              </td>
+              <td data-label="Monto" class="text-end fw-bold" style="color:var(--success)">Bs {{ p.monto }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="tbl-empty">
+              <i class="fa-solid fa-inbox fa-2x mb-2" style="opacity:.25"></i>
+              <div>Sin pagos este mes</div>
+            </div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Tab: Por dentista ── -->
+    <div id="tab-doctor" class="tab-content" style="display:none">
+      <div class="table-responsive">
+        <table class="table rep-table table-mobile mb-0" id="tbl-doctor">
+          <thead>
+            <tr>
+              <th>Dentista</th>
+              <th class="text-center">Pagos</th>
+              <th class="text-center">Pacientes únicos</th>
+              <th class="text-end">Total recaudado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in por_doctor %}
+            <tr onclick="openDoctorModal(
+              '{% if d.doctor__first_name %}{{ d.doctor__first_name|escapejs }} {{ d.doctor__last_name|escapejs }}{% else %}{{ d.doctor__username|default:"Sin asignar"|escapejs }}{% endif %}',
+              {{ d.cantidad }}, {{ d.pacientes }}, '{{ d.total|floatformat:2 }}'
+            )">
+              <td data-label="Dentista" style="font-weight:600">
+                <i class="fa-solid fa-user-doctor me-1" style="color:#a78bfa;font-size:.85rem"></i>
+                {% if d.doctor__first_name %}
+                  {{ d.doctor__first_name }} {{ d.doctor__last_name }}
+                {% else %}
+                  {{ d.doctor__username|default:"Sin asignar" }}
+                {% endif %}
+              </td>
+              <td data-label="Pagos" class="text-center">{{ d.cantidad }}</td>
+              <td data-label="Pacientes únicos" class="text-center">
+                <span class="bdg bdg-ok">
+                  <i class="fa-solid fa-user" style="font-size:.6rem"></i>{{ d.pacientes }}
+                </span>
+              </td>
+              <td data-label="Total" class="text-end fw-bold" style="color:var(--accent)">Bs {{ d.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4"><div class="tbl-empty">
+              <i class="fa-solid fa-user-doctor fa-2x mb-2" style="opacity:.25"></i>
+              <div>Sin datos de dentistas este mes</div>
+            </div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Tab: Por método ── -->
+    <div id="tab-metodo" class="tab-content" style="display:none">
+      <div class="table-responsive">
+        <table class="table rep-table table-mobile mb-0" id="tbl-metodo">
+          <thead>
+            <tr>
+              <th>Método de pago</th>
+              <th class="text-center">Transacciones</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in por_metodo %}
+            <tr>
+              <td data-label="Método" style="font-weight:600">
+                <i class="fa-solid fa-credit-card me-1" style="color:#4e9ff5;font-size:.85rem"></i>
+                {{ m.metodo_pago__nombre|default:"Sin método" }}
+              </td>
+              <td data-label="Transacciones" class="text-center">{{ m.cantidad }}</td>
+              <td data-label="Total" class="text-end fw-bold" style="color:var(--accent)">Bs {{ m.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3"><div class="tbl-empty">Sin datos este mes</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Tab: Cuotas pendientes ── -->
+    <div id="tab-deudas" class="tab-content" style="display:none">
+      <div class="table-responsive">
+        <table class="table rep-table table-mobile mb-0" id="tbl-deudas">
+          <thead>
+            <tr>
+              <th>Paciente</th>
+              <th>Tratamiento</th>
+              <th class="text-center">Cuota</th>
+              <th class="text-end">Monto</th>
+              <th>Vencimiento</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in deudas %}
+            <tr onclick="openDeudaModal(
+              '{{ c.tratamiento.paciente|escapejs }}',
+              '{{ c.tratamiento.servicio.nombre|escapejs }}',
+              {{ c.numero_cuota }},
+              '{{ c.monto|floatformat:2 }}',
+              '{{ c.fecha_vencimiento|date:"d/m/Y" }}',
+              '{{ c.get_estado_display|escapejs }}',
+              {{ c.esta_vencida|yesno:"true,false" }},
+              {{ c.tratamiento.paciente.pk }}
+            )">
+              <td data-label="Paciente" style="font-weight:500">{{ c.tratamiento.paciente }}</td>
+              <td data-label="Tratamiento" style="color:var(--text-2)">{{ c.tratamiento.servicio.nombre }}</td>
+              <td data-label="Cuota" class="text-center" style="font-family:'Space Mono',monospace;font-size:.8rem">
+                {{ c.numero_cuota }}
+              </td>
+              <td data-label="Monto" class="text-end fw-bold">Bs {{ c.monto }}</td>
+              <td data-label="Vencimiento" style="{% if c.esta_vencida %}color:#f87171;font-weight:600{% endif %}">
+                {{ c.fecha_vencimiento|date:"d/m/Y" }}
+                {% if c.esta_vencida %}<i class="fa-solid fa-clock ms-1" style="font-size:.75rem"></i>{% endif %}
+              </td>
+              <td data-label="Estado">
+                {% if c.esta_vencida %}
+                  <span class="bdg bdg-warn">Vencida</span>
+                {% else %}
+                  <span class="bdg bdg-pend">Pendiente</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="tbl-empty">
+              <i class="fa-solid fa-circle-check fa-2x mb-2" style="opacity:.25;color:#22c55e"></i>
+              <div>Sin cuotas pendientes</div>
+            </div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /card-body -->
+</div><!-- /card -->
+
+<!-- ══ Exportar Excel — al pie ════════════════════════ -->
+<div class="mt-3 d-flex justify-content-center">
+  <button class="btn-excel btn-excel-lg" id="btnExcel" onclick="exportExcel()">
+    <i class="fa-solid fa-file-excel" style="font-size:1.15rem"></i>
+    <div>
+      <div>Exportar a Excel</div>
+      <div style="font-size:.68rem;font-weight:400;opacity:.75">Descarga la tabla activa en formato .xlsx</div>
+    </div>
+  </button>
+</div>
+
+
+<!-- ══ Modal: Gráfico (móvil) ════════════════════════ -->
+<div class="modal fade" id="modalChart" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold">
+          <i class="fa-solid fa-chart-bar me-1" style="color:#4e9ff5"></i>Ingresos por período
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="period-pills mb-3" id="periodPillsMobile">
+          <button class="period-pill on" data-period="mes" onclick="switchPeriod(this,'mobile')">
+            <i class="fa-solid fa-calendar-days"></i>Meses
+          </button>
+          <button class="period-pill" data-period="dia" onclick="switchPeriod(this,'mobile')">
+            <i class="fa-solid fa-calendar-day"></i>Días
+          </button>
+          <button class="period-pill" data-period="año" onclick="switchPeriod(this,'mobile')">
+            <i class="fa-solid fa-calendar"></i>Años
+          </button>
+        </div>
+        <canvas id="chartIngresosMobile"></canvas>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row g-3 mb-4">
-  <!-- Gráfica ingresos 6 meses -->
-  <div class="col-12 col-lg-8">
-    <div class="card">
-      <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Ingresos últimos 6 meses</div>
-      <div class="card-body">
-        <canvas id="chartIngresos" height="100"></canvas>
+<!-- ══ Modal: Detalle de pago ═════════════════════════ -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold">
+          <i class="fa-solid fa-receipt me-1" style="color:#4e9ff5"></i>Detalle del pago
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-    </div>
-  </div>
-
-  <!-- Por método de pago -->
-  <div class="col-12 col-lg-4">
-    <div class="card">
-      <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Por método de pago</div>
-      <div class="card-body">
-        <canvas id="chartMetodos" height="180"></canvas>
-        <div class="mt-3">
-          {% for m in por_metodo %}
-          <div class="d-flex justify-content-between py-1 border-bottom" style="border-color:var(--border)!important;font-size:.82rem">
-            <span>{{ m.metodo_pago__nombre }}</span>
-            <span class="fw-600">Bs {{ m.total|floatformat:2 }}</span>
-          </div>
-          {% endfor %}
+      <div class="modal-body">
+        <div class="det-row"><span class="det-lbl">Fecha</span>        <span id="dp-fecha"   class="fw-semibold"></span></div>
+        <div class="det-row"><span class="det-lbl">Paciente</span>     <span id="dp-paciente" class="fw-semibold"></span></div>
+        <div class="det-row"><span class="det-lbl">Concepto</span>     <span id="dp-concepto"></span></div>
+        <div class="det-row"><span class="det-lbl">Método</span>       <span id="dp-metodo"></span></div>
+        <div class="det-row"><span class="det-lbl">Doctor</span>       <span id="dp-doctor"></span></div>
+        <div class="det-row"><span class="det-lbl">N° Recibo</span>    <span id="dp-recibo"  style="font-family:'Space Mono',monospace"></span></div>
+        <div class="det-row">
+          <span class="det-lbl">Monto</span>
+          <span id="dp-monto" class="fw-bold" style="font-size:1.1rem;color:var(--success)"></span>
+        </div>
+        <div id="dp-notas-row" class="det-row" style="display:none">
+          <span class="det-lbl">Notas</span>
+          <span id="dp-notas" style="font-size:.82rem;color:var(--text-2);text-align:right;max-width:70%"></span>
         </div>
       </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Deudas pendientes -->
-<div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Cuotas pendientes / vencidas</span>
-    <span style="font-size:.82rem;color:var(--text-2)">Total: Bs {{ total_deudas|floatformat:2 }}</span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0 table-mobile">
-        <thead>
-          <tr><th>Paciente</th><th>Tratamiento</th><th>Cuota</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th></tr>
-        </thead>
-        <tbody>
-          {% for c in deudas|slice:":20" %}
-          <tr>
-            <td data-label="Paciente">
-              <a href="{% url 'pacientes:detalle' c.tratamiento.paciente.pk %}" class="text-decoration-none text-reset" style="font-size:.875rem;font-weight:500">
-                {{ c.tratamiento.paciente }}
-              </a>
-            </td>
-            <td data-label="Tratamiento" style="font-size:.82rem;color:var(--text-2)">{{ c.tratamiento.servicio.nombre }}</td>
-            <td data-label="Cuota" style="font-family:'Space Mono',monospace;font-size:.8rem">{{ c.numero_cuota }}</td>
-            <td data-label="Monto" style="font-weight:600">Bs {{ c.monto }}</td>
-            <td data-label="Vencimiento">
-              <span style="font-size:.82rem;{% if c.esta_vencida %}color:var(--danger);font-weight:600{% endif %}">
-                {{ c.fecha_vencimiento|date:"d/m/Y" }}
-                {% if c.esta_vencida %}<i class="bi bi-clock-history ms-1"></i>{% endif %}
-              </span>
-            </td>
-            <td data-label="Estado"><span class="badge-estado estado-{{ c.estado }}">{{ c.get_estado_display }}</span></td>
-            <td data-label="Acción">
-              <a href="{% url 'facturacion:pago_paciente' c.tratamiento.paciente.pk %}?cuota={{ c.pk }}"
-                 class="btn btn-sm btn-outline-secondary">Pagar</a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr class="table-empty-row"><td colspan="7" class="text-center text-secondary py-4">Sin deudas pendientes</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<!-- ══ Modal: Detalle dentista ════════════════════════ -->
+<div class="modal fade" id="modalDoctor" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold">
+          <i class="fa-solid fa-user-doctor me-1" style="color:#a78bfa"></i>Resumen por dentista
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="det-row"><span class="det-lbl">Dentista</span>         <span id="dd-nombre"    class="fw-bold"></span></div>
+        <div class="det-row"><span class="det-lbl">Pagos registrados</span><span id="dd-cantidad"></span></div>
+        <div class="det-row"><span class="det-lbl">Pacientes únicos</span> <span id="dd-pacientes"></span></div>
+        <div class="det-row">
+          <span class="det-lbl">Total recaudado (mes)</span>
+          <span id="dd-total" class="fw-bold" style="font-size:1.1rem;color:var(--accent)"></span>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Historial de pagos del mes -->
-<div class="card">
-  <div class="card-header"><i class="bi bi-list-check me-2"></i>Pagos del mes</div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0 table-mobile">
-        <thead>
-          <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th class="text-end">Monto</th></tr>
-        </thead>
-        <tbody>
-          {% for p in pagos_mes %}
-          <tr>
-            <td data-label="Fecha" style="font-family:'Space Mono',monospace;font-size:.8rem">{{ p.fecha|date:"d/m" }}</td>
-            <td data-label="Paciente" style="font-size:.875rem">{{ p.paciente }}</td>
-            <td data-label="Concepto" style="font-size:.82rem;color:var(--text-2)">{{ p.concepto }}</td>
-            <td data-label="Método" style="font-size:.82rem">{{ p.metodo_pago }}</td>
-            <td data-label="Monto" style="font-weight:600;color:var(--success)">Bs {{ p.monto }}</td>
-          </tr>
-          {% empty %}
-          <tr class="table-empty-row"><td colspan="5" class="text-center text-secondary py-4">Sin pagos registrados este mes</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<!-- ══ Modal: Detalle deuda ═══════════════════════════ -->
+<div class="modal fade" id="modalDeuda" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold">
+          <i class="fa-solid fa-clock-rotate-left me-1" style="color:#f87171"></i>Detalle de cuota
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="det-row"><span class="det-lbl">Paciente</span>    <span id="dq-paciente"   class="fw-bold"></span></div>
+        <div class="det-row"><span class="det-lbl">Tratamiento</span> <span id="dq-servicio"></span></div>
+        <div class="det-row"><span class="det-lbl">N° cuota</span>    <span id="dq-cuota"      style="font-family:'Space Mono',monospace"></span></div>
+        <div class="det-row"><span class="det-lbl">Vencimiento</span> <span id="dq-vence"></span></div>
+        <div class="det-row">
+          <span class="det-lbl">Monto</span>
+          <span id="dq-monto" class="fw-bold" style="font-size:1.1rem;color:#f87171"></span>
+        </div>
+        <div class="det-row"><span class="det-lbl">Estado</span>      <span id="dq-estado"></span></div>
+      </div>
+      <div class="modal-footer py-2 d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <a id="dq-link-pago" href="#" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-money-bill-wave me-1"></i>Registrar pago
+        </a>
+      </div>
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const mesesData = {{ meses_data|safe }};
-Chart.defaults.color = '#8b90a0';
+/* ── Datos ────────────────────────────────────────── */
+const DIAS_DATA  = {{ dias_data|safe }};
+const MESES_DATA = {{ meses_data|safe }};
+const ANIOS_DATA = {{ anios_data|safe }};
+
+Chart.defaults.color       = '#8b90a0';
 Chart.defaults.borderColor = '#2a2f3d';
 
-// Ingresos
-new Chart(document.getElementById('chartIngresos'), {
-  type: 'bar',
-  data: {
-    labels: mesesData.map(m => m.mes),
+const CHART_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: { display: false },
+    tooltip: { callbacks: { label: ctx => ' Bs ' + ctx.parsed.y.toFixed(2) } }
+  },
+  scales: {
+    y: { grid: { color: '#2a2f3d' }, ticks: { callback: v => 'Bs ' + v } },
+    x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+  }
+};
+
+function buildChartData(data) {
+  return {
+    labels: data.map(d => d.periodo),
     datasets: [{
       label: 'Ingresos (Bs)',
-      data: mesesData.map(m => m.total),
-      backgroundColor: 'rgba(78,159,245,.3)',
-      borderColor: '#4e9ff5',
-      borderWidth: 2,
-      borderRadius: 6,
+      data:   data.map(d => d.total),
+      backgroundColor:      'rgba(78,159,245,.25)',
+      borderColor:          '#4e9ff5',
+      borderWidth:          2,
+      borderRadius:         5,
+      hoverBackgroundColor: 'rgba(78,159,245,.45)',
     }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { grid: { color: '#2a2f3d' }, ticks: { callback: v => 'Bs ' + v } },
-      x: { grid: { display: false } }
-    }
+  };
+}
+
+/* ── Gráfico desktop ──────────────────────────────── */
+let chartDesktop = null;
+const ctxDesktop = document.getElementById('chartIngresos');
+if (ctxDesktop) {
+  chartDesktop = new Chart(ctxDesktop, {
+    type: 'bar', data: buildChartData(MESES_DATA), options: CHART_OPTIONS
+  });
+}
+
+/* ── Gráfico mobile (se inicia al abrir el modal) ─── */
+let chartMobile     = null;
+let currentData     = MESES_DATA;   // dato activo compartido entre ambos
+let currentPeriod   = 'mes';
+
+document.getElementById('modalChart').addEventListener('shown.bs.modal', function () {
+  const ctx = document.getElementById('chartIngresosMobile');
+  if (!chartMobile) {
+    chartMobile = new Chart(ctx, {
+      type: 'bar', data: buildChartData(currentData), options: CHART_OPTIONS
+    });
+  } else {
+    chartMobile.data = buildChartData(currentData);
+    chartMobile.update();
   }
+  // Sincronizar pills del modal con el período activo
+  document.querySelectorAll('#periodPillsMobile .period-pill').forEach(b => {
+    b.classList.toggle('on', b.dataset.period === currentPeriod);
+  });
 });
 
-// Métodos pago
-const metodos = [{% for m in por_metodo %}'{{ m.metodo_pago__nombre }}',{% endfor %}];
-const totales = [{% for m in por_metodo %}{{ m.total }},{% endfor %}];
-const COLORS = ['#4e9ff5','#34d399','#fbbf24','#a78bfa','#f87171','#22d3ee'];
+/* ── Cambiar período ──────────────────────────────── */
+function switchPeriod(btn, scope) {
+  // Actualizar estado compartido
+  currentPeriod = btn.dataset.period;
+  currentData   = currentPeriod === 'dia' ? DIAS_DATA
+                : currentPeriod === 'año' ? ANIOS_DATA
+                : MESES_DATA;
 
-if (metodos.length > 0) {
-  new Chart(document.getElementById('chartMetodos'), {
-    type: 'doughnut',
-    data: {
-      labels: metodos,
-      datasets: [{
-        data: totales,
-        backgroundColor: COLORS.slice(0, metodos.length),
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } }
-      },
-      cutout: '65%',
-    }
-  });
+  // Actualizar pills del scope que disparó
+  const container = scope === 'mobile' ? '#periodPillsMobile' : '#periodPillsDesktop';
+  document.querySelectorAll(container + ' .period-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+
+  // Actualizar el gráfico correspondiente
+  const targetChart = scope === 'mobile' ? chartMobile : chartDesktop;
+  if (targetChart) {
+    targetChart.data = buildChartData(currentData);
+    targetChart.update();
+  }
+}
+
+/* ── Tabs ─────────────────────────────────────────── */
+function switchTab(btn) {
+  document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-' + btn.dataset.tab).style.display = '';
+}
+
+/* ── Modal: pago ──────────────────────────────────── */
+let modalPago, modalDoctor, modalDeuda;
+function openPagoModal(pk, fecha, paciente, concepto, metodo, doctor, monto, notas, recibo) {
+  document.getElementById('dp-fecha').textContent    = fecha;
+  document.getElementById('dp-paciente').textContent = paciente;
+  document.getElementById('dp-concepto').textContent = concepto;
+  document.getElementById('dp-metodo').textContent   = metodo;
+  document.getElementById('dp-doctor').textContent   = doctor;
+  document.getElementById('dp-recibo').textContent   = recibo || '—';
+  document.getElementById('dp-monto').textContent    = 'Bs ' + monto;
+  const notasRow = document.getElementById('dp-notas-row');
+  if (notas) {
+    document.getElementById('dp-notas').textContent = notas;
+    notasRow.style.display = '';
+  } else {
+    notasRow.style.display = 'none';
+  }
+  if (!modalPago) modalPago = new bootstrap.Modal(document.getElementById('modalPago'));
+  modalPago.show();
+}
+
+/* ── Modal: doctor ────────────────────────────────── */
+function openDoctorModal(nombre, cantidad, pacientes, total) {
+  document.getElementById('dd-nombre').textContent   = nombre;
+  document.getElementById('dd-cantidad').textContent = cantidad;
+  document.getElementById('dd-pacientes').textContent= pacientes;
+  document.getElementById('dd-total').textContent    = 'Bs ' + total;
+  if (!modalDoctor) modalDoctor = new bootstrap.Modal(document.getElementById('modalDoctor'));
+  modalDoctor.show();
+}
+
+/* ── Modal: deuda ─────────────────────────────────── */
+function openDeudaModal(paciente, servicio, cuota, monto, vence, estado, vencida, pacientePk) {
+  document.getElementById('dq-paciente').textContent = paciente;
+  document.getElementById('dq-servicio').textContent = servicio;
+  document.getElementById('dq-cuota').textContent    = cuota;
+  document.getElementById('dq-vence').textContent    = vence;
+  document.getElementById('dq-monto').textContent    = 'Bs ' + monto;
+  document.getElementById('dq-estado').innerHTML     = vencida
+    ? '<span class="bdg bdg-warn"><i class="fa-solid fa-clock" style="font-size:.6rem"></i>Vencida</span>'
+    : '<span class="bdg bdg-pend">Pendiente</span>';
+  document.getElementById('dq-link-pago').href = `/facturacion/pago/nuevo/${pacientePk}/`;
+  if (!modalDeuda) modalDeuda = new bootstrap.Modal(document.getElementById('modalDeuda'));
+  modalDeuda.show();
+}
+
+/* ── Exportar Excel ────────────────────────────────── */
+function exportExcel() {
+  // Detectar tab activo y su tabla
+  const activeTab = document.querySelector('.tab-pill.on')?.dataset.tab;
+  const tableId   = { pagos: 'tbl-pagos', doctor: 'tbl-doctor', metodo: 'tbl-metodo', deudas: 'tbl-deudas' }[activeTab];
+  if (!tableId) return;
+
+  const tbl  = document.getElementById(tableId);
+  const wb   = XLSX.utils.book_new();
+  const ws   = XLSX.utils.table_to_sheet(tbl);
+  const names = { pagos: 'Pagos', doctor: 'Por Dentista', metodo: 'Por Método', deudas: 'Cuotas' };
+  XLSX.utils.book_append_sheet(wb, ws, names[activeTab] || 'Reporte');
+  XLSX.writeFile(wb, `reporte_${activeTab}_{{ hoy|date:"Y-m-d" }}.xlsx`);
 }
 </script>
 {% endblock %}

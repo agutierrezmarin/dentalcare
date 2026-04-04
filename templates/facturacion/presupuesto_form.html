@@ -8,282 +8,509 @@
 
 {% block extra_css %}
 <style>
+/* ══ Hero ════════════════════════════════════════════ */
+.pac-hero {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg); padding: 1rem 1.25rem;
+  margin-bottom: 1rem; box-shadow: var(--shadow);
+}
+.pac-avatar-letters {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 800; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border: 3px solid var(--border);
+}
+.pac-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--accent); flex-shrink: 0;
+}
+.pac-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 600; padding: .22em .6em;
+  border-radius: 20px; background: var(--bg-base);
+  border: 1px solid var(--border-light); color: var(--text-2);
+}
+
+/* ══ Item cards ══════════════════════════════════════ */
+.item-card {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: 10px; padding: .65rem .85rem;
+  display: flex; align-items: center; gap: .65rem;
+  transition: border-color .12s;
+}
+.item-card:hover { border-color: var(--accent); }
+.item-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.item-edit-btn {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--bg-base);
+  cursor: pointer; color: var(--text-2); transition: all .12s;
+}
+.item-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══ Empty state ══════════════════════════════════════ */
+.empty-state {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 2.5rem 1rem; text-align: center; color: var(--text-3);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.empty-state:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-surface));
+}
+
+/* ══ Totales ══════════════════════════════════════════ */
+.totals-box {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: 12px; padding: .85rem 1rem;
+}
+.total-row { display: flex; justify-content: space-between; align-items: center;
+             padding: .28rem 0; font-size: .87rem; }
+.total-row.grand { font-size: 1.1rem; font-weight: 700;
+                   border-top: 2px solid var(--border); padding-top: .6rem; margin-top: .25rem; }
+
+/* ══ Modal servicio search ═══════════════════════════ */
 .svc-card {
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  padding: .5rem .75rem;
-  cursor: pointer;
-  transition: all .15s;
-  background: var(--bg-surface);
-  display: flex; align-items: center; gap: .55rem;
+  border: 1.5px solid var(--border-light); border-radius: 8px;
+  padding: .5rem .7rem; cursor: pointer; background: var(--bg-surface);
+  display: flex; align-items: center; gap: .5rem;
+  transition: border-color .12s, background .12s;
 }
-.svc-card:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface)); }
-.svc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.svc-nm  { font-size: .8rem; font-weight: 600; line-height: 1.2; }
+.svc-card:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
+}
+.svc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.svc-nm  { font-size: .82rem; font-weight: 600; line-height: 1.2; }
 .svc-pr  { font-size: .7rem; color: var(--text-2); }
-.item-row td { vertical-align: middle; padding: .4rem .5rem; }
-.item-row input { background: var(--bg-surface); border-color: var(--border); color: var(--text-1); }
-.item-row input:focus { background: var(--bg-surface); color: var(--text-1); border-color: var(--accent); box-shadow: none; }
-.total-row { display: flex; justify-content: space-between; align-items: center; padding: .35rem 0; font-size: .88rem; }
-.total-row.grand { font-size: 1.1rem; font-weight: 700; border-top: 2px solid var(--border); padding-top: .6rem; margin-top: .3rem; }
 .cat-label {
-  font-size: .66rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .07em; padding: .3rem 0 .2rem;
-  display: flex; align-items: center; gap: .4rem;
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; padding: .4rem 0 .15rem;
+  display: flex; align-items: center; gap: .35rem; color: var(--text-3);
 }
+
+/* Modal overrides */
+.modal-content {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+.modal-header { border-bottom-color: var(--border); }
+.modal-footer { border-top-color: var(--border); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row g-4">
 
-  <!-- ══ Izquierda: picker de servicios ══ -->
-  <div class="col-12 col-lg-4">
-    <div class="card h-100">
-      <div class="card-header">
-        <i class="fa-solid fa-tooth fa-fw me-1"></i>Servicios disponibles
+<!-- ══ Hero ══════════════════════════════════════════ -->
+<div class="pac-hero d-flex align-items-center gap-3">
+  {% if paciente.foto %}
+    <img src="{{ paciente.foto.url }}" class="pac-avatar" alt="">
+  {% else %}
+    <div class="pac-avatar-letters">
+      {{ paciente.apellidos|first|upper }}{{ paciente.nombres|first|upper }}
+    </div>
+  {% endif %}
+  <div class="flex-grow-1 min-width-0">
+    <div class="fw-bold" style="font-size:1.05rem;line-height:1.2">
+      {{ paciente.apellidos }} {{ paciente.nombres }}
+    </div>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+      {% if paciente.ci %}
+        <span class="pac-chip"><i class="fa-solid fa-id-card fa-fw"></i>{{ paciente.ci }}</span>
+      {% endif %}
+      {% if paciente.telefono %}
+        <span class="pac-chip"><i class="fa-solid fa-phone fa-fw"></i>{{ paciente.telefono }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <a href="{% url 'pacientes:detalle' paciente.pk %}"
+     class="btn btn-outline-secondary btn-sm flex-shrink-0">
+    <i class="fa-solid fa-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<!-- ══ Formulario ════════════════════════════════════ -->
+<form method="post" id="formPresupuesto" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="items_json" id="itemsJsonField">
+  <input type="hidden" name="descuento_global" id="descuentoGlobalField" value="0">
+
+  <div class="row g-3">
+
+    <!-- ── Columna izquierda: ítems ── -->
+    <div class="col-12 col-lg-7">
+
+      <!-- Cabecera sección -->
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-bold" style="font-size:.95rem">
+          <i class="fa-solid fa-list-check me-1" style="color:var(--accent)"></i>
+          Servicios en el presupuesto
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="openSvcModal()">
+          <i class="fa-solid fa-plus me-1"></i>Agregar servicio
+        </button>
       </div>
-      <div class="card-body p-2">
-        <input type="text" id="svcSearch" class="form-control form-control-sm mb-2"
-               placeholder="Buscar servicio…">
-        <div id="svcList" style="max-height:calc(100vh - 280px);overflow-y:auto;
-                                  display:flex;flex-direction:column;gap:.35rem">
+
+      <!-- Lista de ítems -->
+      <div id="itemsList" class="d-flex flex-column gap-2"></div>
+
+      <!-- Estado vacío -->
+      <div id="emptyMsg" class="empty-state" onclick="openSvcModal()">
+        <i class="fa-solid fa-tooth fa-2x mb-2" style="opacity:.3"></i>
+        <div style="font-size:.85rem;font-weight:600">Sin servicios aún</div>
+        <div style="font-size:.75rem;margin-top:.25rem">Toca aquí para agregar un servicio</div>
+      </div>
+
+      <!-- Notas -->
+      <div class="mt-3">
+        <label class="form-label" style="font-size:.82rem">
+          <i class="fa-solid fa-note-sticky me-1" style="color:var(--text-3)"></i>
+          Notas / observaciones
+        </label>
+        {{ form.notas }}
+      </div>
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2 mt-2" style="font-size:.82rem">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Columna derecha: totales ── -->
+    <div class="col-12 col-lg-5">
+      <div class="totals-box mb-3">
+        <div class="fw-bold mb-2" style="font-size:.85rem">
+          <i class="fa-solid fa-calculator me-1" style="color:var(--accent)"></i>
+          Resumen
+        </div>
+
+        <!-- Descuento global -->
+        <div class="mb-3">
+          <label class="form-label" style="font-size:.78rem;margin-bottom:.3rem">
+            <i class="fa-solid fa-percent me-1"></i>Descuento global (%)
+          </label>
+          <input type="number" id="descuentoGlobalInput" class="form-control form-control-sm"
+                 min="0" max="100" step="0.5" value="0"
+                 oninput="recalc()"
+                 style="max-width:140px">
+          <div style="font-size:.7rem;color:var(--text-3);margin-top:.2rem">
+            Aplicado sobre el subtotal tras descuentos por ítem
+          </div>
+        </div>
+
+        <!-- Totales -->
+        <div class="total-row">
+          <span style="color:var(--text-2)">Subtotal ítems</span>
+          <span id="lblSubtotal" class="fw-semibold">Bs 0.00</span>
+        </div>
+        <div class="total-row" id="rowDescGlobal" style="display:none">
+          <span style="color:#f87171">
+            Desc. global (<span id="lblDescPct">0</span>%)
+          </span>
+          <span style="color:#f87171">− Bs <span id="lblDescMonto">0.00</span></span>
+        </div>
+        <div class="total-row grand">
+          <span>TOTAL</span>
+          <span style="color:var(--accent)" id="lblTotal">Bs 0.00</span>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>
+          <i class="fa-solid fa-check me-1"></i>Crear presupuesto
+        </button>
+        <a href="{% url 'pacientes:detalle' paciente.pk %}"
+           class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL — Seleccionar servicio
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalSvc" tabindex="-1" aria-labelledby="modalSvcLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold" id="modalSvcLabel">
+          <i class="fa-solid fa-tooth me-1" style="color:var(--accent)"></i>
+          Seleccionar servicio
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Búsqueda -->
+        <input type="text" id="svcSearch" class="form-control form-control-sm mb-3"
+               placeholder="Buscar servicio por nombre…"
+               autocomplete="off">
+
+        <!-- Lista de servicios -->
+        <div id="svcList" style="display:flex;flex-direction:column;gap:.3rem">
           {% regroup servicios by categoria as cat_groups %}
           {% for group in cat_groups %}
-          <div class="cat-label" style="color:{{ group.grouper.color|default:'#6b7280' }}">
+          <div class="cat-label">
             <span style="width:7px;height:7px;border-radius:50%;
                          background:{{ group.grouper.color|default:'#6b7280' }};
                          display:inline-block;flex-shrink:0"></span>
             {{ group.grouper.nombre|default:"Sin categoría" }}
           </div>
           {% for s in group.list %}
-          <div class="svc-card" data-pk="{{ s.pk }}" data-precio="{{ s.precio }}"
+          <div class="svc-card" data-pk="{{ s.pk }}"
+               data-precio="{{ s.precio|floatformat:2 }}"
                data-nombre="{{ s.nombre }}"
                data-color="{{ s.categoria.color|default:'#6b7280' }}"
-               onclick="addItem(this)">
+               onclick="addItemFromModal(this)">
             <span class="svc-dot" style="background:{{ s.categoria.color|default:'#6b7280' }}"></span>
             <div class="flex-grow-1 min-width-0">
               <div class="svc-nm text-truncate">{{ s.nombre }}</div>
               <div class="svc-pr">Bs {{ s.precio }}</div>
             </div>
-            <i class="fa-solid fa-plus" style="font-size:.7rem;color:var(--text-3);flex-shrink:0"></i>
+            <i class="fa-solid fa-plus" style="font-size:.75rem;color:var(--accent);flex-shrink:0"></i>
           </div>
           {% endfor %}
           {% endfor %}
         </div>
+
+        <div id="svcNoResults" class="text-center py-4" style="display:none;color:var(--text-3);font-size:.82rem">
+          <i class="fa-solid fa-magnifying-glass fa-2x mb-2" style="opacity:.3"></i>
+          <div>Sin resultados para tu búsqueda</div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <span style="font-size:.78rem;color:var(--text-3)" id="svcAddedCount"></span>
+        <button type="button" class="btn btn-primary btn-sm ms-auto" data-bs-dismiss="modal">
+          <i class="fa-solid fa-check me-1"></i>Listo
+        </button>
       </div>
     </div>
   </div>
-
-  <!-- ══ Derecha: presupuesto ══ -->
-  <div class="col-12 col-lg-8">
-    <div class="card">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-file-lines fa-fw"></i>
-        Nuevo presupuesto — <strong>{{ paciente }}</strong>
-      </div>
-      <div class="card-body">
-        <form method="post" id="formPresupuesto" novalidate>
-          {% csrf_token %}
-          <input type="hidden" name="items_json" id="itemsJsonField">
-          <input type="hidden" name="descuento_global" id="descuentoGlobalField" value="0">
-
-          <!-- Tabla de servicios -->
-          <div style="overflow-x:auto">
-            <table class="table table-sm mb-0" id="itemsTable" style="display:none">
-              <thead>
-                <tr style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2)">
-                  <th>Servicio</th>
-                  <th style="width:75px" class="text-center">Diente</th>
-                  <th style="width:60px" class="text-center">Cant.</th>
-                  <th style="width:115px" class="text-end">P. Unitario</th>
-                  <th style="width:80px" class="text-center">Desc.%</th>
-                  <th style="width:110px" class="text-end">Subtotal</th>
-                  <th style="width:38px"></th>
-                </tr>
-              </thead>
-              <tbody id="itemsBody"></tbody>
-            </table>
-          </div>
-
-          <!-- Vacío placeholder -->
-          <div id="emptyMsg" class="text-center py-5" style="color:var(--text-3)">
-            <i class="fa-solid fa-hand-point-left fa-2x mb-2" style="opacity:.3"></i>
-            <p class="mb-0" style="font-size:.82rem">
-              Haz clic en un servicio de la izquierda para agregarlo al presupuesto
-            </p>
-          </div>
-
-          <hr style="border-color:var(--border)">
-
-          <!-- Descuento global + totales -->
-          <div class="row g-3">
-            <div class="col-md-5">
-              <label class="form-label" style="font-size:.82rem">
-                <i class="fa-solid fa-percent me-1" style="color:var(--accent)"></i>
-                Descuento global al presupuesto (%)
-              </label>
-              <input type="number" id="descuentoGlobalInput" class="form-control"
-                     min="0" max="100" step="0.5" value="0"
-                     oninput="recalc()"
-                     style="max-width:160px">
-              <div style="font-size:.72rem;color:var(--text-3);margin-top:.3rem">
-                Se aplica sobre el subtotal después de descuentos por ítem
-              </div>
-            </div>
-            <div class="col-md-7">
-              <div class="total-row">
-                <span style="color:var(--text-2)">Subtotal ítems</span>
-                <span id="lblSubtotal" class="fw-semibold">Bs 0.00</span>
-              </div>
-              <div class="total-row" id="rowDescGlobal" style="display:none">
-                <span style="color:#f87171">Descuento global (<span id="lblDescPct">0</span>%)</span>
-                <span style="color:#f87171">− Bs <span id="lblDescMonto">0.00</span></span>
-              </div>
-              <div class="total-row grand">
-                <span>TOTAL PRESUPUESTADO</span>
-                <span style="color:var(--accent)" id="lblTotal">Bs 0.00</span>
-              </div>
-            </div>
-          </div>
-
-          <hr style="border-color:var(--border)">
-
-          <!-- Notas -->
-          <div class="mb-4">
-            <label class="form-label" style="font-size:.82rem">
-              <i class="fa-solid fa-note-sticky me-1" style="color:var(--text-3)"></i>
-              Notas / observaciones
-            </label>
-            {{ form.notas }}
-          </div>
-
-          {% if form.non_field_errors %}
-          <div class="alert alert-danger py-2" style="font-size:.82rem">{{ form.non_field_errors }}</div>
-          {% endif %}
-
-          <div class="d-flex justify-content-end gap-2">
-            <a href="{% url 'pacientes:detalle' paciente.pk %}"
-               class="btn btn-outline-secondary">
-              <i class="fa-solid fa-xmark me-1"></i>Cancelar
-            </a>
-            <button type="submit" class="btn btn-primary px-4" id="btnSubmit" disabled>
-              <i class="fa-solid fa-check me-1"></i>Crear presupuesto
-            </button>
-          </div>
-
-        </form>
-      </div>
-    </div>
-  </div>
-
 </div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL — Editar ítem
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEditItem" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold" id="modalEditLabel">
+          <i class="fa-solid fa-pen-to-square me-1" style="color:var(--accent)"></i>
+          Editar ítem
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editIdx">
+
+        <!-- Nombre (solo lectura) -->
+        <div class="mb-3">
+          <label class="form-label" style="font-size:.8rem">Servicio</label>
+          <div id="editNombre" class="form-control form-control-sm"
+               style="background:var(--bg-base);color:var(--text-1);pointer-events:none">
+          </div>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label" style="font-size:.8rem">
+              <i class="fa-solid fa-tooth fa-fw me-1" style="color:var(--text-3)"></i>N.° diente
+            </label>
+            <input type="number" id="editDiente" class="form-control form-control-sm"
+                   min="11" max="85" placeholder="Ej. 36">
+          </div>
+          <div class="col-6">
+            <label class="form-label" style="font-size:.8rem">
+              <i class="fa-solid fa-hashtag fa-fw me-1" style="color:var(--text-3)"></i>Cantidad
+            </label>
+            <input type="number" id="editCantidad" class="form-control form-control-sm"
+                   min="1" value="1">
+          </div>
+          <div class="col-6">
+            <label class="form-label" style="font-size:.8rem">
+              <i class="fa-solid fa-tag fa-fw me-1" style="color:var(--text-3)"></i>P. Unitario (Bs)
+            </label>
+            <input type="number" id="editPrecio" class="form-control form-control-sm"
+                   min="0" step="0.01">
+          </div>
+          <div class="col-6">
+            <label class="form-label" style="font-size:.8rem">
+              <i class="fa-solid fa-percent fa-fw me-1" style="color:var(--text-3)"></i>Descuento %
+            </label>
+            <input type="number" id="editDescuento" class="form-control form-control-sm"
+                   min="0" max="100" step="0.5" value="0">
+          </div>
+        </div>
+
+        <!-- Subtotal preview -->
+        <div class="mt-3 p-2 rounded d-flex justify-content-between align-items-center"
+             style="background:var(--bg-base);font-size:.88rem">
+          <span style="color:var(--text-2)">Subtotal ítem</span>
+          <span class="fw-bold" id="editSubPreview" style="color:var(--accent)">Bs 0.00</span>
+        </div>
+      </div>
+      <div class="modal-footer py-2 d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-danger btn-sm" id="btnDeleteItem">
+          <i class="fa-solid fa-trash me-1"></i>Eliminar
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveItem">
+          <i class="fa-solid fa-check me-1"></i>Guardar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let items = [];
+let svcModal, editModal;
 
-function addItem(card) {
-  const pk = parseInt(card.dataset.pk);
+/* ── Abrir modal servicios ────────────────────────── */
+function openSvcModal() {
+  document.getElementById('svcSearch').value = '';
+  filterSvc('');
+  if (!svcModal) svcModal = new bootstrap.Modal(document.getElementById('modalSvc'));
+  svcModal.show();
+  setTimeout(() => document.getElementById('svcSearch').focus(), 300);
+}
+
+/* ── Agregar desde modal (no cierra el modal) ─────── */
+function addItemFromModal(card) {
+  const pk    = parseInt(card.dataset.pk);
   const exist = items.find(i => i.ref_id === pk && !i.numero_diente);
   if (exist) {
     exist.cantidad++;
-    renderTable();
-    return;
+  } else {
+    items.push({
+      ref_id:          pk,
+      nombre:          card.dataset.nombre,
+      color:           card.dataset.color,
+      precio_unitario: parseFloat(String(card.dataset.precio).replace(',','.')),
+      cantidad:        1,
+      descuento:       0,
+      numero_diente:   '',
+    });
   }
-  items.push({
-    ref_id:          pk,
-    nombre:          card.dataset.nombre,
-    color:           card.dataset.color,
-    precio_unitario: parseFloat(card.dataset.precio),
-    cantidad:        1,
-    descuento:       0,
-    numero_diente:   '',
-  });
-  renderTable();
+  renderItems();
+  // Feedback visual en la card
+  const icon = card.querySelector('i.fa-plus');
+  if (icon) {
+    icon.classList.replace('fa-plus', 'fa-check');
+    icon.style.color = '#22c55e';
+    setTimeout(() => {
+      icon.classList.replace('fa-check', 'fa-plus');
+      icon.style.color = 'var(--accent)';
+    }, 900);
+  }
+  updateAddedCount();
 }
 
-function renderTable() {
-  const tbody = document.getElementById('itemsBody');
+function updateAddedCount() {
+  const total = items.reduce((s, i) => s + i.cantidad, 0);
+  document.getElementById('svcAddedCount').textContent =
+    total > 0 ? `${total} ítem${total !== 1 ? 's' : ''} en el presupuesto` : '';
+}
+
+/* ── Renderizar lista de ítems ────────────────────── */
+function renderItems() {
+  const list  = document.getElementById('itemsList');
   const empty = document.getElementById('emptyMsg');
   const btn   = document.getElementById('btnSubmit');
-  const tbl   = document.getElementById('itemsTable');
 
   if (items.length === 0) {
-    tbody.innerHTML = '';
+    list.innerHTML = '';
     empty.style.display = '';
-    tbl.style.display = 'none';
     btn.disabled = true;
     recalc();
     return;
   }
   empty.style.display = 'none';
-  tbl.style.display = '';
   btn.disabled = false;
 
-  tbody.innerHTML = items.map((item, idx) => {
-    const sub = item.cantidad * item.precio_unitario * (1 - item.descuento / 100);
-    const discRow = item.descuento > 0
-      ? `<div style="font-size:.68rem;color:#f87171">−${item.descuento}%</div>`
-      : '';
+  list.innerHTML = items.map((item, idx) => {
+    const sub  = item.cantidad * item.precio_unitario * (1 - item.descuento / 100);
+    const meta = [];
+    if (item.numero_diente) meta.push(`Diente ${item.numero_diente}`);
+    if (item.cantidad > 1)  meta.push(`×${item.cantidad}`);
+    if (item.descuento > 0) meta.push(`−${item.descuento}%`);
+
     return `
-    <tr class="item-row">
-      <td>
-        <div style="display:flex;align-items:center;gap:.4rem">
-          <span style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0"></span>
-          <span style="font-size:.82rem;font-weight:500">${item.nombre}</span>
+    <div class="item-card">
+      <span class="item-dot" style="background:${item.color}"></span>
+      <div class="flex-grow-1 min-width-0">
+        <div style="font-size:.85rem;font-weight:600;line-height:1.3" class="text-truncate">${item.nombre}</div>
+        <div style="font-size:.72rem;color:var(--text-3);margin-top:.1rem">
+          ${meta.length ? meta.join(' · ') : 'Sin detalles'}
         </div>
-      </td>
-      <td>
-        <input type="number" class="form-control form-control-sm text-center"
-               min="11" max="85" placeholder="—" value="${item.numero_diente || ''}"
-               oninput="updateItem(${idx},'numero_diente',this.value)"
-               style="width:65px">
-      </td>
-      <td>
-        <input type="number" class="form-control form-control-sm text-center"
-               min="1" value="${item.cantidad}"
-               oninput="updateItem(${idx},'cantidad',parseFloat(this.value)||1)"
-               style="width:55px">
-      </td>
-      <td>
-        <input type="number" class="form-control form-control-sm text-end"
-               min="0" step="0.01" value="${item.precio_unitario.toFixed(2)}"
-               oninput="updateItem(${idx},'precio_unitario',parseFloat(this.value)||0)"
-               style="width:105px">
-      </td>
-      <td>
-        <input type="number" class="form-control form-control-sm text-center"
-               min="0" max="100" step="0.5" value="${item.descuento}"
-               oninput="updateItem(${idx},'descuento',parseFloat(this.value)||0)"
-               style="width:70px">
-      </td>
-      <td class="text-end" style="font-size:.85rem">
-        <div class="fw-semibold">Bs ${sub.toFixed(2)}</div>
-        ${discRow}
-      </td>
-      <td>
-        <button type="button" class="btn btn-sm btn-outline-secondary"
-                onclick="removeItem(${idx})" style="padding:.2rem .45rem">
-          <i class="fa-solid fa-xmark" style="font-size:.75rem"></i>
-        </button>
-      </td>
-    </tr>`;
+      </div>
+      <div style="font-size:.9rem;font-weight:700;color:var(--accent);flex-shrink:0;margin-right:.4rem">
+        Bs ${sub.toFixed(2)}
+      </div>
+      <button type="button" class="item-edit-btn" onclick="openEditModal(${idx})" title="Editar">
+        <i class="fa-solid fa-pen" style="font-size:.72rem"></i>
+      </button>
+    </div>`;
   }).join('');
   recalc();
 }
 
-function updateItem(idx, field, val) {
-  items[idx][field] = val;
-  renderTable();
+/* ── Modal editar ítem ────────────────────────────── */
+function openEditModal(idx) {
+  const item = items[idx];
+  document.getElementById('editIdx').value         = idx;
+  document.getElementById('editNombre').textContent = item.nombre;
+  document.getElementById('editDiente').value       = item.numero_diente || '';
+  document.getElementById('editCantidad').value     = item.cantidad;
+  document.getElementById('editPrecio').value       = item.precio_unitario.toFixed(2);
+  document.getElementById('editDescuento').value    = item.descuento;
+  updateEditPreview();
+
+  if (!editModal) editModal = new bootstrap.Modal(document.getElementById('modalEditItem'));
+  editModal.show();
 }
 
-function removeItem(idx) {
+function updateEditPreview() {
+  const cant = parseFloat(document.getElementById('editCantidad').value)  || 1;
+  const prec = parseFloat(document.getElementById('editPrecio').value)    || 0;
+  const desc = parseFloat(document.getElementById('editDescuento').value) || 0;
+  const sub  = cant * prec * (1 - desc / 100);
+  document.getElementById('editSubPreview').textContent = 'Bs ' + sub.toFixed(2);
+}
+
+['editCantidad','editPrecio','editDescuento'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updateEditPreview)
+);
+
+document.getElementById('btnSaveItem').addEventListener('click', () => {
+  const idx = parseInt(document.getElementById('editIdx').value);
+  items[idx].numero_diente   = document.getElementById('editDiente').value;
+  items[idx].cantidad        = parseFloat(document.getElementById('editCantidad').value) || 1;
+  items[idx].precio_unitario = parseFloat(document.getElementById('editPrecio').value)   || 0;
+  items[idx].descuento       = parseFloat(document.getElementById('editDescuento').value)|| 0;
+  renderItems();
+  editModal.hide();
+});
+
+document.getElementById('btnDeleteItem').addEventListener('click', () => {
+  const idx = parseInt(document.getElementById('editIdx').value);
   items.splice(idx, 1);
-  renderTable();
-}
+  renderItems();
+  editModal.hide();
+});
 
+/* ── Recalcular totales ───────────────────────────── */
 function recalc() {
   let subtotal = 0;
   items.forEach(i => {
@@ -301,31 +528,43 @@ function recalc() {
   document.getElementById('descuentoGlobalField').value  = descPct;
 }
 
+/* ── Buscar servicios ─────────────────────────────── */
+function filterSvc(q) {
+  q = q.toLowerCase();
+  let anyVisible = false;
+  document.querySelectorAll('#svcList .svc-card').forEach(c => {
+    const match = c.dataset.nombre.toLowerCase().includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) anyVisible = true;
+  });
+  // Ocultar etiquetas sin hijos visibles
+  document.querySelectorAll('#svcList .cat-label').forEach(lbl => {
+    let sib = lbl.nextElementSibling;
+    let vis = false;
+    while (sib && !sib.classList.contains('cat-label')) {
+      if (sib.classList.contains('svc-card') && sib.style.display !== 'none') { vis = true; break; }
+      sib = sib.nextElementSibling;
+    }
+    lbl.style.display = vis ? '' : 'none';
+  });
+  document.getElementById('svcNoResults').style.display = anyVisible ? 'none' : '';
+}
+
+document.getElementById('svcSearch').addEventListener('input', function () {
+  filterSvc(this.value);
+});
+
+/* ── Submit ───────────────────────────────────────── */
 document.getElementById('formPresupuesto').addEventListener('submit', function (e) {
   if (items.length === 0) {
     e.preventDefault();
-    alert('Agrega al menos un servicio al presupuesto.');
+    openSvcModal();
     return;
   }
   document.getElementById('itemsJsonField').value = JSON.stringify(items);
 });
 
-document.getElementById('svcSearch').addEventListener('input', function () {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll('.svc-card').forEach(c => {
-    c.style.display = c.dataset.nombre.toLowerCase().includes(q) ? '' : 'none';
-  });
-  document.querySelectorAll('.cat-label').forEach(lbl => {
-    let sibling = lbl.nextElementSibling;
-    let allHidden = true;
-    while (sibling && !sibling.classList.contains('cat-label')) {
-      if (sibling.classList.contains('svc-card') && sibling.style.display !== 'none') {
-        allHidden = false; break;
-      }
-      sibling = sibling.nextElementSibling;
-    }
-    lbl.style.display = allHidden ? 'none' : '';
-  });
-});
+/* ── Init ─────────────────────────────────────────── */
+renderItems();
 </script>
 {% endblock %}

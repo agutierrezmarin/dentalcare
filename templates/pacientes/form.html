@@ -8,160 +8,251 @@
 
 {% block extra_css %}
 <style>
-/* ── Sección header ───────────────────────────── */
+/* ══ Sección header ══════════════════════════════════ */
 .form-section-header {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .85rem 1.1rem;
+  display: flex; align-items: center; gap: .6rem;
+  padding: .75rem 1rem;
   border-bottom: 1.5px solid var(--border-light);
-  background: var(--green-pale);
+  background: var(--bg-base);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 .form-section-icon {
-  width: 34px; height: 34px;
-  border-radius: 9px;
+  width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: .95rem;
-  flex-shrink: 0;
+  font-size: .88rem; flex-shrink: 0;
 }
-.form-section-title {
-  font-weight: 700;
-  font-size: .92rem;
-  color: var(--green-deep);
-}
-.form-section-sub {
-  font-size: .72rem;
-  color: var(--text-3);
-  margin-top: .05rem;
-}
+.form-section-title { font-weight: 700; font-size: .88rem; line-height: 1.2; }
+.form-section-sub   { font-size: .7rem; color: var(--text-3); }
 
-/* ── Input con icono ──────────────────────────── */
-.input-icon-wrap {
-  position: relative;
-}
+/* ══ Input con icono ══════════════════════════════════ */
+.input-icon-wrap { position: relative; }
 .input-icon-wrap .input-icon {
-  position: absolute;
-  left: .85rem;
-  top: 50%;
+  position: absolute; left: .8rem; top: 50%;
   transform: translateY(-50%);
-  color: var(--text-3);
-  font-size: .88rem;
-  pointer-events: none;
-  z-index: 2;
+  color: var(--text-3); font-size: .85rem;
+  pointer-events: none; z-index: 2;
 }
 .input-icon-wrap .form-control,
-.input-icon-wrap .form-select {
-  padding-left: 2.4rem;
-}
+.input-icon-wrap .form-select { padding-left: 2.3rem; }
+.input-icon-wrap.ta .input-icon { top: .65rem; transform: none; }
 
-/* ── Zona de foto drag-drop ───────────────────── */
-.photo-dropzone {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem .75rem;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color .2s, background .2s;
-  background: var(--bg-base);
-  position: relative;
+/* ══ Avatar foto perfil ══════════════════════════════ */
+.avatar-wrap {
+  position: relative; width: 110px; height: 110px;
+  flex-shrink: 0;
 }
-.photo-dropzone:hover,
-.photo-dropzone.over {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+.avatar-img {
+  width: 110px; height: 110px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--accent);
+  display: block; background: var(--bg-base);
 }
-.photo-dropzone input[type="file"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
+.avatar-letters {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  border: 3px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; font-weight: 800; line-height: 1;
 }
-.photo-preview {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--accent);
-  display: none;
-  margin: 0 auto .5rem;
+.avatar-change-btn {
+  position: absolute; bottom: 4px; right: 4px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  border: 2px solid var(--bg-surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: .75rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transition: background .15s, transform .12s;
+  z-index: 2;
 }
-.photo-dropzone-icon {
-  font-size: 1.8rem;
+.avatar-change-btn:hover { background: var(--accent-mid); transform: scale(1.1); }
+/* Input de archivo oculto, colocado sobre el botón */
+.avatar-file-input {
+  position: absolute; bottom: 4px; right: 4px;
+  width: 30px; height: 30px; border-radius: 50%;
+  opacity: 0; cursor: pointer; z-index: 3;
+}
+.avatar-card {
+  background: var(--bg-surface); border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg); padding: 1.1rem 1.25rem;
+  margin-bottom: 0; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 1.1rem;
+  flex-wrap: wrap;
+}
+.avatar-info { flex: 1; min-width: 0; }
+.avatar-hint {
+  font-size: .7rem; color: var(--text-3); margin-top: .35rem;
+  display: flex; align-items: center; gap: .3rem; flex-wrap: wrap;
+}
+.avatar-hint-tag {
+  background: var(--bg-base); border: 1px solid var(--border-light);
+  border-radius: 20px; padding: .1em .55em; font-size: .65rem;
   color: var(--text-3);
-  margin-bottom: .4rem;
+}
+/* Badge "imagen actual" */
+.badge-actual {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .7rem; font-weight: 600; padding: .2em .6em;
+  border-radius: 20px; background: rgba(34,197,94,.12);
+  color: #22c55e; border: 1px solid rgba(34,197,94,.25);
+  margin-bottom: .3rem;
+}
+/* Badge "nueva imagen" */
+.badge-nueva {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .7rem; font-weight: 600; padding: .2em .6em;
+  border-radius: 20px; background: rgba(99,102,241,.12);
+  color: #6366f1; border: 1px solid rgba(99,102,241,.25);
+  margin-bottom: .3rem;
+}
+/* Drag-over state para avatar */
+.avatar-wrap.drag-over .avatar-img,
+.avatar-wrap.drag-over .avatar-letters {
+  outline: 3px dashed var(--accent);
+  outline-offset: 3px;
 }
 
-/* ── Botones guardar ──────────────────────────── */
+/* ══ Botones guardar (sticky) ════════════════════════ */
 .form-actions {
-  position: sticky;
-  bottom: 0;
+  position: sticky; bottom: 0;
   background: var(--bg-surface);
   border-top: 1.5px solid var(--border-light);
-  padding: .9rem 1.1rem;
-  display: flex;
-  gap: .6rem;
-  justify-content: flex-end;
+  padding: .8rem 1rem;
+  display: flex; gap: .6rem; justify-content: flex-end;
   z-index: 50;
   border-radius: 0 0 var(--radius) var(--radius);
-  margin-top: .5rem;
 }
 
-@media (max-width: 576px) {
+/* ══ Sub-sección ═════════════════════════════════════ */
+.sub-section-label {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-3);
+  padding: .5rem 0 .35rem;
+  display: flex; align-items: center; gap: .4rem;
+}
+
+/* ══ Mobile ══════════════════════════════════════════ */
+@media (max-width: 575px) {
   .form-actions {
-    border-radius: 0;
-    margin: 0 -.65rem;
+    border-radius: 0; margin: 0 -.65rem; padding: .7rem .85rem;
   }
-  .form-actions .btn { flex: 1; justify-content: center; }
+  .form-actions .btn { flex: 1; justify-content: center; display: flex; }
+  .card-body { padding: .85rem !important; }
+  .form-section-header { padding: .65rem .85rem; }
   .input-icon-wrap .form-control,
-  .input-icon-wrap .form-select { padding-left: 2.2rem; }
+  .input-icon-wrap .form-select { padding-left: 2.1rem; }
+  .avatar-wrap { width: 90px; height: 90px; }
+  .avatar-img, .avatar-letters { width: 90px; height: 90px; font-size: 1.8rem; }
+  .avatar-file-input { width: 28px; height: 28px; }
+  .avatar-change-btn { width: 28px; height: 28px; font-size: .7rem; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Encabezado de página -->
-<div class="d-flex align-items-center gap-3 mb-4">
-  <div style="width:44px;height:44px;border-radius:12px;
+<!-- ══ Encabezado de página ═══════════════════════════ -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;
               background:linear-gradient(135deg,var(--accent),var(--accent-mid));
               display:flex;align-items:center;justify-content:center;
-              color:#fff;font-size:1.25rem;flex-shrink:0;
-              box-shadow:0 4px 14px rgba(45,184,122,.35)">
+              color:#fff;font-size:1.2rem;
+              box-shadow:0 4px 14px rgba(45,184,122,.3)">
     <i class="fa-solid {% if paciente %}fa-user-pen{% else %}fa-user-plus{% endif %}"></i>
   </div>
-  <div>
-    <h4 class="fw-bold mb-0">{{ titulo }}</h4>
-    <div style="font-size:.78rem;color:var(--text-3)">
+  <div class="flex-grow-1 min-w-0">
+    <h5 class="fw-bold mb-0">{{ titulo }}</h5>
+    <div style="font-size:.75rem;color:var(--text-3)">
       {% if paciente %}Modifica los datos del paciente{% else %}Completa los campos para registrar un nuevo paciente{% endif %}
     </div>
   </div>
+  {% if paciente %}
+  <a href="{% url 'pacientes:detalle' paciente.pk %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+    <i class="fa-solid fa-arrow-left me-1"></i>Volver
+  </a>
+  {% else %}
+  <a href="{% url 'pacientes:lista' %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+    <i class="fa-solid fa-arrow-left me-1"></i>Volver
+  </a>
+  {% endif %}
 </div>
 
 <form method="post" enctype="multipart/form-data" id="formPaciente">
   {% csrf_token %}
   <div class="row g-3">
 
-    <!-- ══ DATOS PERSONALES ══ -->
+    <!-- ══ FOTO DE PERFIL ══════════════════════════════ -->
+    <div class="col-12">
+      <div class="avatar-card">
+
+        <!-- Avatar con botón de cambio -->
+        <div class="avatar-wrap" id="avatarWrap">
+          {% if paciente and paciente.foto %}
+            <img id="avatarImg" class="avatar-img" src="{{ paciente.foto.url }}" alt="Foto de perfil">
+          {% else %}
+            <div id="avatarImg" class="avatar-letters">
+              {% if paciente %}
+                {{ paciente.apellidos|first|upper }}{{ paciente.nombres|first|upper }}
+              {% else %}
+                <i class="fa-solid fa-user" style="font-size:2rem;opacity:.4"></i>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Botón cámara encima del avatar -->
+          <div class="avatar-change-btn" title="Cambiar foto">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <!-- Input file oculto posicionado sobre el botón -->
+          {{ form.foto }}
+        </div>
+
+        <!-- Texto informativo -->
+        <div class="avatar-info">
+          <div class="fw-bold" style="font-size:.92rem">Foto de perfil</div>
+
+          <div id="fotoStatus">
+            {% if paciente and paciente.foto %}
+            <span class="badge-actual">
+              <i class="fa-solid fa-circle-check" style="font-size:.65rem"></i>Imagen actual guardada
+            </span>
+            {% else %}
+            <span style="font-size:.78rem;color:var(--text-3)">Sin foto asignada</span>
+            {% endif %}
+          </div>
+
+          <div class="avatar-hint">
+            <i class="fa-solid fa-circle-info" style="font-size:.65rem"></i>
+            Toca el ícono
+            <i class="fa-solid fa-camera" style="font-size:.65rem;color:var(--accent)"></i>
+            o arrastra una imagen sobre el avatar para cambiarla
+            <span class="avatar-hint-tag">JPG</span>
+            <span class="avatar-hint-tag">PNG</span>
+            <span class="avatar-hint-tag">máx 5 MB</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ DATOS PERSONALES ════════════════════════════ -->
     <div class="col-12">
       <div class="card">
         <div class="form-section-header">
-          <div class="form-section-icon" style="background:rgba(45,184,122,.14);color:var(--accent)">
+          <div class="form-section-icon" style="background:rgba(45,184,122,.13);color:var(--accent)">
             <i class="fa-solid fa-id-card"></i>
           </div>
           <div>
             <div class="form-section-title">Datos personales</div>
-            <div class="form-section-sub">Identificación y datos básicos del paciente</div>
+            <div class="form-section-sub">Identificación y datos básicos</div>
           </div>
         </div>
         <div class="card-body">
           <div class="row g-3">
 
-            <!-- Nombres -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-md-4">
               <label class="form-label">
-                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Nombres <span class="text-danger">*</span>
+                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>
+                Nombres <span class="text-danger">*</span>
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-user"></i>
@@ -169,10 +260,10 @@
               </div>
             </div>
 
-            <!-- Apellidos -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-md-4">
               <label class="form-label">
-                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>Apellidos <span class="text-danger">*</span>
+                <i class="fa-solid fa-user fa-xs me-1" style="color:var(--accent)"></i>
+                Apellidos <span class="text-danger">*</span>
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-user"></i>
@@ -180,10 +271,10 @@
               </div>
             </div>
 
-            <!-- CI -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-md-4">
               <label class="form-label">
-                <i class="fa-solid fa-id-badge fa-xs me-1" style="color:#8b5cf6"></i>Cédula de identidad
+                <i class="fa-solid fa-id-badge fa-xs me-1" style="color:#8b5cf6"></i>
+                Cédula de identidad
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-id-badge" style="color:#8b5cf6"></i>
@@ -191,10 +282,10 @@
               </div>
             </div>
 
-            <!-- Fecha de nacimiento -->
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-4">
               <label class="form-label">
-                <i class="fa-solid fa-cake-candles fa-xs me-1" style="color:#f59e0b"></i>Fecha de nacimiento
+                <i class="fa-solid fa-cake-candles fa-xs me-1" style="color:#f59e0b"></i>
+                Fecha de nacimiento
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-calendar" style="color:#f59e0b"></i>
@@ -202,8 +293,7 @@
               </div>
             </div>
 
-            <!-- Sexo -->
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-4">
               <label class="form-label">
                 <i class="fa-solid fa-venus-mars fa-xs me-1" style="color:#ec4899"></i>Sexo
               </label>
@@ -213,31 +303,14 @@
               </div>
             </div>
 
-            <!-- Tipo sangre -->
-            <div class="col-6 col-md-3">
+            <div class="col-12 col-sm-6 col-md-4">
               <label class="form-label">
-                <i class="fa-solid fa-droplet fa-xs me-1" style="color:#ef4444"></i>Tipo de sangre
+                <i class="fa-solid fa-droplet fa-xs me-1" style="color:#ef4444"></i>
+                Tipo de sangre
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-droplet" style="color:#ef4444"></i>
                 {{ form.tipo_sangre }}
-              </div>
-            </div>
-
-            <!-- Foto -->
-            <div class="col-6 col-md-3">
-              <label class="form-label">
-                <i class="fa-solid fa-camera fa-xs me-1" style="color:#06b6d4"></i>Foto de perfil
-              </label>
-              <div class="photo-dropzone" id="photoZone"
-                   ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
-                <img id="photoPreview" class="photo-preview" src="" alt="Preview">
-                <div id="photoPlaceholder">
-                  <div class="photo-dropzone-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-                  <div style="font-size:.78rem;color:var(--text-2);font-weight:500">Arrastra o toca para subir</div>
-                  <div style="font-size:.68rem;color:var(--text-3);margin-top:.2rem">JPG, PNG · máx 5 MB</div>
-                </div>
-                {{ form.foto }}
               </div>
             </div>
 
@@ -246,11 +319,11 @@
       </div>
     </div>
 
-    <!-- ══ CONTACTO ══ -->
+    <!-- ══ CONTACTO ════════════════════════════════════ -->
     <div class="col-12 col-md-6">
       <div class="card h-100">
         <div class="form-section-header">
-          <div class="form-section-icon" style="background:rgba(6,182,212,.14);color:#06b6d4">
+          <div class="form-section-icon" style="background:rgba(6,182,212,.13);color:#06b6d4">
             <i class="fa-solid fa-address-book"></i>
           </div>
           <div>
@@ -260,23 +333,24 @@
         </div>
         <div class="card-body">
 
-          <div class="mb-3">
-            <label class="form-label">
-              <i class="fa-solid fa-phone fa-xs me-1" style="color:#06b6d4"></i>Teléfono
-            </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-phone" style="color:#06b6d4"></i>
-              {{ form.telefono }}
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-sm-6 col-md-12">
+              <label class="form-label">
+                <i class="fa-solid fa-phone fa-xs me-1" style="color:#06b6d4"></i>Teléfono
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-phone" style="color:#06b6d4"></i>
+                {{ form.telefono }}
+              </div>
             </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">
-              <i class="fa-solid fa-envelope fa-xs me-1" style="color:#8b5cf6"></i>Correo electrónico
-            </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-envelope" style="color:#8b5cf6"></i>
-              {{ form.email }}
+            <div class="col-12 col-sm-6 col-md-12">
+              <label class="form-label">
+                <i class="fa-solid fa-envelope fa-xs me-1" style="color:#8b5cf6"></i>Correo electrónico
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-envelope" style="color:#8b5cf6"></i>
+                {{ form.email }}
+              </div>
             </div>
           </div>
 
@@ -284,28 +358,30 @@
             <label class="form-label">
               <i class="fa-solid fa-location-dot fa-xs me-1" style="color:#f59e0b"></i>Dirección
             </label>
-            <div class="input-icon-wrap">
+            <div class="input-icon-wrap ta">
               <i class="input-icon fa-solid fa-location-dot" style="color:#f59e0b"></i>
               {{ form.direccion }}
             </div>
           </div>
 
-          <div style="background:var(--bg-base);border-radius:var(--radius);padding:.85rem;border:1px solid var(--border-light)">
-            <div style="font-size:.75rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.7rem">
-              <i class="fa-solid fa-triangle-exclamation me-1" style="color:#f59e0b"></i>Contacto de emergencia
+          <div style="background:var(--bg-base);border-radius:var(--radius);
+                      padding:.75rem;border:1px solid var(--border-light)">
+            <div class="sub-section-label">
+              <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
+              Contacto de emergencia
             </div>
             <div class="row g-2">
-              <div class="col-7">
-                <label class="form-label" style="font-size:.8rem">Nombre</label>
+              <div class="col-12 col-sm-7">
+                <label class="form-label" style="font-size:.78rem">Nombre</label>
                 <div class="input-icon-wrap">
-                  <i class="input-icon fa-solid fa-user-shield" style="color:#f59e0b;font-size:.8rem"></i>
+                  <i class="input-icon fa-solid fa-user-shield" style="color:#f59e0b;font-size:.78rem"></i>
                   {{ form.contacto_emergencia }}
                 </div>
               </div>
-              <div class="col-5">
-                <label class="form-label" style="font-size:.8rem">Teléfono</label>
+              <div class="col-12 col-sm-5">
+                <label class="form-label" style="font-size:.78rem">Teléfono</label>
                 <div class="input-icon-wrap">
-                  <i class="input-icon fa-solid fa-phone" style="color:#f59e0b;font-size:.8rem"></i>
+                  <i class="input-icon fa-solid fa-phone" style="color:#f59e0b;font-size:.78rem"></i>
                   {{ form.telefono_emergencia }}
                 </div>
               </div>
@@ -316,11 +392,11 @@
       </div>
     </div>
 
-    <!-- ══ HISTORIAL MÉDICO ══ -->
+    <!-- ══ HISTORIAL MÉDICO ════════════════════════════ -->
     <div class="col-12 col-md-6">
       <div class="card h-100">
         <div class="form-section-header">
-          <div class="form-section-icon" style="background:rgba(239,68,68,.12);color:#ef4444">
+          <div class="form-section-icon" style="background:rgba(239,68,68,.11);color:#ef4444">
             <i class="fa-solid fa-heart-pulse"></i>
           </div>
           <div>
@@ -332,40 +408,44 @@
 
           <div class="mb-3">
             <label class="form-label">
-              <i class="fa-solid fa-triangle-exclamation fa-xs me-1" style="color:#f59e0b"></i>Alergias conocidas
+              <i class="fa-solid fa-triangle-exclamation fa-xs me-1" style="color:#f59e0b"></i>
+              Alergias conocidas
             </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-triangle-exclamation" style="color:#f59e0b;top:.9rem;transform:none"></i>
+            <div class="input-icon-wrap ta">
+              <i class="input-icon fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
               {{ form.alergias }}
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label">
-              <i class="fa-solid fa-pills fa-xs me-1" style="color:#8b5cf6"></i>Medicamentos actuales
+              <i class="fa-solid fa-pills fa-xs me-1" style="color:#8b5cf6"></i>
+              Medicamentos actuales
             </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-pills" style="color:#8b5cf6;top:.9rem;transform:none"></i>
+            <div class="input-icon-wrap ta">
+              <i class="input-icon fa-solid fa-pills" style="color:#8b5cf6"></i>
               {{ form.medicamentos_actuales }}
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label">
-              <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ef4444"></i>Enfermedades crónicas
+              <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ef4444"></i>
+              Enfermedades crónicas
             </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-stethoscope" style="color:#ef4444;top:.9rem;transform:none"></i>
+            <div class="input-icon-wrap ta">
+              <i class="input-icon fa-solid fa-stethoscope" style="color:#ef4444"></i>
               {{ form.enfermedades_cronicas }}
             </div>
           </div>
 
           <div>
             <label class="form-label">
-              <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>Observaciones
+              <i class="fa-solid fa-note-sticky fa-xs me-1" style="color:var(--text-3)"></i>
+              Observaciones
             </label>
-            <div class="input-icon-wrap">
-              <i class="input-icon fa-solid fa-note-sticky" style="color:var(--text-3);top:.9rem;transform:none"></i>
+            <div class="input-icon-wrap ta">
+              <i class="input-icon fa-solid fa-note-sticky" style="color:var(--text-3)"></i>
               {{ form.observaciones }}
             </div>
           </div>
@@ -374,7 +454,7 @@
       </div>
     </div>
 
-    <!-- ══ BOTONES ══ -->
+    <!-- ══ BOTONES ══════════════════════════════════════ -->
     <div class="col-12">
       <div class="form-actions">
         {% if paciente %}
@@ -399,39 +479,77 @@
 
 {% block extra_js %}
 <script>
-/* ── Drag & drop foto ── */
-const photoInput = document.querySelector('#photoZone input[type="file"]');
-const photoPreview = document.getElementById('photoPreview');
-const photoPlaceholder = document.getElementById('photoPlaceholder');
-const photoZone = document.getElementById('photoZone');
+(function () {
+  const photoInput   = document.querySelector('#id_foto');
+  const avatarWrap   = document.getElementById('avatarWrap');
+  const fotoStatus   = document.getElementById('fotoStatus');
 
-function showPreview(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  if (file.size > 5 * 1024 * 1024) {
-    alert('La imagen supera el límite de 5 MB.'); return;
+  // Posicionar el input de archivo encima del botón cámara
+  if (photoInput) {
+    photoInput.classList.add('avatar-file-input');
   }
-  const reader = new FileReader();
-  reader.onload = e => {
-    photoPreview.src = e.target.result;
-    photoPreview.style.display = 'block';
-    photoPlaceholder.style.display = 'none';
-  };
-  reader.readAsDataURL(file);
-}
 
-photoInput.addEventListener('change', () => showPreview(photoInput.files[0]));
+  function applyPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen supera el límite de 5 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      // Reemplazar lo que haya en el avatar wrap (img o div letras) con la nueva imagen
+      const existing = avatarWrap.querySelector('.avatar-img, .avatar-letters');
+      if (existing) {
+        // Si ya es una img, actualizar src
+        if (existing.tagName === 'IMG') {
+          existing.src = e.target.result;
+        } else {
+          // Era letras/icono → crear img
+          const img = document.createElement('img');
+          img.id        = 'avatarImg';
+          img.className = 'avatar-img';
+          img.src       = e.target.result;
+          img.alt       = 'Vista previa';
+          existing.replaceWith(img);
+        }
+      }
+      // Actualizar badge de estado
+      fotoStatus.innerHTML = `
+        <span class="badge-nueva">
+          <i class="fa-solid fa-sparkles" style="font-size:.65rem"></i>Nueva imagen seleccionada
+        </span>
+        <div style="font-size:.72rem;color:var(--text-3);margin-top:.15rem">
+          <i class="fa-solid fa-file-image me-1"></i>${file.name}
+          <span style="opacity:.6">(${(file.size/1024).toFixed(0)} KB)</span>
+        </div>`;
+    };
+    reader.readAsDataURL(file);
+  }
 
-function dzOver(e)  { e.preventDefault(); photoZone.classList.add('over'); }
-function dzLeave(e) { photoZone.classList.remove('over'); }
-function dzDrop(e)  {
-  e.preventDefault();
-  photoZone.classList.remove('over');
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  photoInput.files = dt.files;
-  showPreview(file);
-}
+  if (photoInput) {
+    photoInput.addEventListener('change', function () {
+      applyPreview(this.files[0]);
+    });
+  }
+
+  // Drag & drop sobre todo el avatar-wrap
+  avatarWrap.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    avatarWrap.classList.add('drag-over');
+  });
+  avatarWrap.addEventListener('dragleave', function () {
+    avatarWrap.classList.remove('drag-over');
+  });
+  avatarWrap.addEventListener('drop', function (e) {
+    e.preventDefault();
+    avatarWrap.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    photoInput.files = dt.files;
+    applyPreview(file);
+  });
+})();
 </script>
 {% endblock %}

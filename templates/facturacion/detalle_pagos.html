@@ -12,9 +12,14 @@
     <h4 class="fw-bold mb-0">Control de pagos</h4>
     <p class="text-secondary mb-0" style="font-size:.82rem">{{ paciente }}</p>
   </div>
-  <a href="{% url 'facturacion:pago_paciente' paciente.pk %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus me-1"></i>Registrar pago
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'pacientes:detalle' paciente.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+    <a href="{% url 'facturacion:pago_paciente' paciente.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus me-1"></i>Registrar pago
+    </a>
+  </div>
 </div>
 
 <!-- Resumen -->

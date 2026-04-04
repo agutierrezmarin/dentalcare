@@ -20,10 +20,25 @@ class NotaClinicaForm(forms.ModelForm):
         model = NotaClinica
         fields = ['motivo', 'hallazgos', 'diagnostico', 'plan_tratamiento']
         widgets = {
-            'motivo': forms.TextInput(attrs={'class': 'form-control'}),
-            'hallazgos': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'diagnostico': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'plan_tratamiento': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'motivo': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': 'Ej. Dolor en muela, revisión general…',
+            }),
+            'hallazgos': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'rows': 3,
+                'placeholder': 'Describe los hallazgos observados…',
+            }),
+            'diagnostico': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'rows': 3,
+                'placeholder': 'Diagnóstico clínico…',
+            }),
+            'plan_tratamiento': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'rows': 2,
+                'placeholder': 'Plan de tratamiento propuesto (opcional)…',
+            }),
         }
 
 

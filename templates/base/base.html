@@ -252,5 +252,23 @@ function toggleMobileSearch() {
 })();
 </script>
 {% block extra_js %}{% endblock %}
+<script>
+/* ── Breadcrumb: muestra solo el último segmento en móvil ── */
+(function () {
+  function updateBreadcrumb() {
+    var bc = document.querySelector('.topbar-breadcrumb');
+    if (!bc) return;
+    if (window.innerWidth <= 575) {
+      if (!bc.dataset.bcFull) bc.dataset.bcFull = bc.innerHTML;
+      var parts = bc.textContent.trim().split('/').map(function(s){ return s.trim(); }).filter(Boolean);
+      if (parts.length > 1) bc.textContent = parts[parts.length - 1];
+    } else {
+      if (bc.dataset.bcFull) { bc.innerHTML = bc.dataset.bcFull; delete bc.dataset.bcFull; }
+    }
+  }
+  document.addEventListener('DOMContentLoaded', updateBreadcrumb);
+  window.addEventListener('resize', updateBreadcrumb);
+})();
+</script>
 </body>
 </html>
