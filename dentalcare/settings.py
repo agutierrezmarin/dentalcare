@@ -1,14 +1,20 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-cambiar-en-produccion-dentalcare-2025"
+# Cargar variables desde .env (solo si existe — en producción se usa el .env del servidor)
+load_dotenv(BASE_DIR / '.env')
 
-DEBUG = True
+# ── Seguridad ──────────────────────────────────────────────────────────
+SECRET_KEY = os.environ['SECRET_KEY']
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.9"]
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')]
+
+# ── Aplicaciones ───────────────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -16,7 +22,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Apps del proyecto
     "pacientes",
     "agenda",
     "clinico",
@@ -57,40 +62,43 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "dentalcare.wsgi.application"
 
+# ── Base de datos ──────────────────────────────────────────────────────
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "dentalcare_db"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "6081449ale"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+        "NAME":     os.environ.get("DB_NAME",     "dentalcare_db"),
+        "USER":     os.environ.get("DB_USER",     "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST":     os.environ.get("DB_HOST",     "localhost"),
+        "PORT":     os.environ.get("DB_PORT",     "5432"),
     }
 }
 
+# ── Validación de contraseñas ──────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# ── Internacionalización ───────────────────────────────────────────────
 LANGUAGE_CODE = "es-bo"
-TIME_ZONE = "America/La_Paz"
-USE_I18N = True
-USE_TZ = True
+TIME_ZONE     = "America/La_Paz"
+USE_I18N      = True
+USE_TZ        = True
 
-STATIC_URL = "/static/"
+# ── Archivos estáticos y media ─────────────────────────────────────────
+STATIC_URL       = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT      = BASE_DIR / "staticfiles"
 
-MEDIA_URL = "/media/"
+MEDIA_URL  = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ── Misc ───────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL = "/login/"
+LOGIN_URL          = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"

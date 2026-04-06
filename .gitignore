@@ -1,0 +1,35 @@
+# Variables de entorno — NUNCA subir al repositorio
+.env
+
+# Entorno virtual
+venv_dentalcare/
+venv/
+env/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Archivos estáticos recolectados
+staticfiles/
+
+# Archivos media subidos por usuarios
+media/
+
+# Base de datos SQLite (si se usa en desarrollo)
+*.sqlite3
+db.sqlite3
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

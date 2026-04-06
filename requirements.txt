@@ -1,4 +1,9 @@
+asgiref==3.11.1
+python-dotenv==1.2.2
 Django==5.1.7
-psycopg[binary]==3.2.4
-Pillow==11.1.0
+pillow==11.1.0
+psycopg==3.2.4
+psycopg-binary==3.2.4
 python-dateutil==2.9.0
+six==1.17.0
+sqlparse==0.5.5
