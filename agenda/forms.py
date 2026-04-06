@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import Cita, Sillon
 from pacientes.models import Paciente
 from clinico.models import Servicio
@@ -25,11 +26,60 @@ class CitaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
         self.fields['doctor'].queryset = User.objects.filter(
             perfil__rol__in=['dentista', 'admin'],
             perfil__activo=True
         )
+
+        if user is not None:
+            es_admin = hasattr(user, 'perfil') and user.perfil.rol == 'admin'
+            if not es_admin:
+                # Doctor por defecto: el usuario actual
+                if not self.initial.get('doctor') and not self.data.get('doctor'):
+                    self.initial['doctor'] = user.pk
+
+                # Pacientes: solo los que han tenido citas con este doctor
+                from agenda.models import Cita as _Cita
+                ids = _Cita.objects.filter(doctor=user).values_list('paciente_id', flat=True).distinct()
+                self.fields['paciente'].queryset = Paciente.objects.filter(
+                    pk__in=ids, activo=True
+                ).order_by('apellidos', 'nombres')
+
+    def clean(self):
+        cleaned = super().clean()
+        doctor      = cleaned.get('doctor')
+        fecha       = cleaned.get('fecha')
+        hora_inicio = cleaned.get('hora_inicio')
+        hora_fin    = cleaned.get('hora_fin')
+
+        if hora_inicio and hora_fin and hora_inicio >= hora_fin:
+            raise ValidationError('La hora de fin debe ser posterior a la hora de inicio.')
+
+        if doctor and fecha and hora_inicio and hora_fin:
+            conflictos = Cita.objects.filter(
+                doctor=doctor,
+                fecha=fecha,
+                estado__in=['programada', 'confirmada', 'en_curso'],
+                hora_fin__gt=hora_inicio,
+                hora_inicio__lt=hora_fin,
+            )
+            if self.instance and self.instance.pk:
+                conflictos = conflictos.exclude(pk=self.instance.pk)
+
+            if conflictos.exists():
+                c = conflictos.select_related('paciente').first()
+                nombre_doc = doctor.get_full_name() or doctor.username
+                raise ValidationError(
+                    f'El Dr./Dra. {nombre_doc} ya tiene una cita de '
+                    f'{c.hora_inicio.strftime("%H:%M")} a {c.hora_fin.strftime("%H:%M")} '
+                    f'con {c.paciente} el {fecha.strftime("%d/%m/%Y")}. '
+                    f'Elige otro horario o selecciona un doctor disponible.'
+                )
+
+        return cleaned
 
 
 class CobrarCitaForm(forms.Form):

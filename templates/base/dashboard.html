@@ -3,90 +3,142 @@
 {% block breadcrumb %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-  <h4 style="font-family:'Roboto',sans-serif;font-weight:700;color:var(--green-deep);font-size:1.7rem;margin-bottom:.15rem">
-    Bienvenido, {{ request.user.get_full_name|default:request.user.username }}
-  </h4>
-  <p style="color:var(--text-2);font-size:.97rem;font-family:Georgia,serif;">
-    <i class="bi bi-calendar2-week-fill me-1" style="color:var(--accent)"></i>
-    {{ hoy|date:"l, d \d\e F \d\e Y" }}
-  </p>
+
+<!-- Saludo -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:52px;height:52px;border-radius:14px;flex-shrink:0;
+              background:linear-gradient(135deg,var(--accent),var(--accent-mid));
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.4rem;
+              box-shadow:0 4px 16px rgba(45,184,122,.3)">
+    {% if es_admin %}
+      <i class="fa-solid fa-gauge-high"></i>
+    {% else %}
+      <i class="fa-solid fa-user-doctor"></i>
+    {% endif %}
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0" style="color:var(--green-deep)">
+      Bienvenido, {{ request.user.get_full_name|default:request.user.username }}
+    </h4>
+    <div style="color:var(--text-2);font-size:.85rem">
+      <i class="fa-solid fa-calendar-day me-1" style="color:var(--accent)"></i>
+      {{ hoy|date:"l, d \d\e F \d\e Y" }}
+      {% if not es_admin %}
+      &nbsp;·&nbsp;
+      <span style="background:var(--accent)18;color:var(--accent);
+                   padding:.15em .65em;border-radius:20px;font-weight:600;font-size:.8rem">
+        {{ request.user.perfil.get_rol_display }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
-<!-- KPIs -->
+<!-- ═══ KPIs ═══════════════════════════════════════════════════════════ -->
 <div class="row g-3 mb-4">
+
+  <!-- Pacientes -->
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon accent"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-icon accent"><i class="fa-solid fa-users"></i></div>
       <div>
         <div class="stat-value">{{ total_pacientes }}</div>
-        <div class="stat-label">Pacientes activos</div>
+        <div class="stat-label">{% if es_admin %}Pacientes activos{% else %}Mis pacientes{% endif %}</div>
       </div>
     </div>
   </div>
+
+  <!-- Citas hoy -->
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon success"><i class="bi bi-calendar-check-fill"></i></div>
+      <div class="stat-icon success"><i class="fa-solid fa-calendar-check"></i></div>
       <div>
         <div class="stat-value">{{ citas_hoy.count }}</div>
         <div class="stat-label">Citas hoy</div>
       </div>
     </div>
   </div>
+
+  <!-- Citas del mes -->
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon warning"><i class="bi bi-calendar3"></i></div>
+      <div class="stat-icon warning"><i class="fa-solid fa-calendar-days"></i></div>
       <div>
         <div class="stat-value">{{ citas_mes }}</div>
         <div class="stat-label">Citas este mes</div>
       </div>
     </div>
   </div>
+
+  <!-- 4to KPI: ingresos (admin) / completadas (otros) -->
   <div class="col-6 col-md-3">
+    {% if es_admin %}
     <div class="stat-card">
-      <div class="stat-icon info"><i class="bi bi-cash-coin"></i></div>
+      <div class="stat-icon info"><i class="fa-solid fa-coins"></i></div>
       <div>
         <div class="stat-value">Bs {{ ingresos_mes|floatformat:0 }}</div>
         <div class="stat-label">Ingresos del mes</div>
       </div>
     </div>
+    {% else %}
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(139,92,246,.14);color:#8b5cf6">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ citas_completadas_mes }}</div>
+        <div class="stat-label">Completadas este mes</div>
+      </div>
+    </div>
+    {% endif %}
   </div>
+
 </div>
+<!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="row g-3">
+
   <!-- Citas de hoy -->
-  <div class="col-12 col-lg-7">
+  <div class="{% if es_admin %}col-12 col-lg-8{% else %}col-12{% endif %}">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-calendar-event me-2 text-accent"></i>Citas de hoy</span>
+        <span>
+          <i class="fa-solid fa-calendar-day me-2" style="color:var(--accent)"></i>
+          {% if es_admin %}Citas de hoy{% else %}Mis citas de hoy{% endif %}
+        </span>
         <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary btn-sm">
-          <i class="bi bi-plus"></i> Nueva
+          <i class="fa-solid fa-plus me-1"></i>Nueva
         </a>
       </div>
       <div class="card-body p-0">
         {% if citas_hoy %}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-hover mb-0" style="font-size:.875rem">
             <thead>
               <tr>
-                <th>Hora</th>
+                <th style="width:70px">Hora</th>
                 <th>Paciente</th>
-                <th>Doctor</th>
+                {% if es_admin %}<th>Doctor</th>{% endif %}
                 <th>Servicio</th>
-                <th>Estado</th>
+                <th style="width:110px">Estado</th>
               </tr>
             </thead>
             <tbody>
               {% for c in citas_hoy %}
-              <tr>
-                <td style="font-family:'Space Mono',monospace;font-size:.8rem">{{ c.hora_inicio|time:"H:i" }}</td>
-                <td>
-                  <a href="{% url 'pacientes:detalle' c.paciente.pk %}" class="text-decoration-none text-reset fw-500">
-                    {{ c.paciente.apellidos }} {{ c.paciente.nombres }}
-                  </a>
+              <tr style="cursor:pointer" onclick="location.href='{% url 'agenda:editar_cita' c.pk %}'">
+                <td style="font-family:'Roboto Mono',monospace;font-size:.8rem;color:var(--text-2)">
+                  {{ c.hora_inicio|time:"H:i" }}
                 </td>
-                <td class="text-secondary" style="font-size:.82rem">{{ c.doctor.get_full_name|default:"-" }}</td>
-                <td class="text-secondary" style="font-size:.82rem">{{ c.servicio|default:"-" }}</td>
+                <td>
+                  <span class="fw-semibold">{{ c.paciente.apellidos }} {{ c.paciente.nombres }}</span>
+                </td>
+                {% if es_admin %}
+                <td style="font-size:.8rem;color:var(--text-2)">
+                  {{ c.doctor.get_full_name|default:"—" }}
+                </td>
+                {% endif %}
+                <td style="font-size:.8rem;color:var(--text-2)">{{ c.servicio|default:"—" }}</td>
                 <td>
                   <span class="badge-estado estado-{{ c.estado }}">{{ c.get_estado_display }}</span>
                 </td>
@@ -96,57 +148,172 @@
           </table>
         </div>
         {% else %}
-        <div class="text-center py-5 text-secondary">
-          <i class="bi bi-calendar-x" style="font-size:2rem;opacity:.3"></i>
-          <p class="mt-2 mb-0" style="font-size:.85rem">Sin citas programadas para hoy</p>
+        <div class="text-center py-5" style="color:var(--text-3)">
+          <i class="fa-solid fa-calendar-xmark fa-2x mb-2" style="opacity:.3"></i>
+          <p class="mb-0" style="font-size:.85rem">Sin citas programadas para hoy</p>
         </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Próximas citas + accesos rápidos -->
-  <div class="col-12 col-lg-5">
+  <!-- Sidebar derecho solo para admin -->
+  {% if es_admin %}
+  <div class="col-12 col-lg-4">
+
+    <!-- Resumen estados hoy -->
+    {% if resumen_estados %}
     <div class="card mb-3">
       <div class="card-header">
-        <i class="bi bi-clock-history me-2 text-accent"></i>Próximas citas
+        <i class="fa-solid fa-chart-pie me-2" style="color:var(--accent)"></i>Resumen de hoy
+      </div>
+      <div class="card-body py-2 px-3">
+        {% for item in resumen_estados %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.35rem 0;border-bottom:1px solid var(--border-light)">
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;color:var(--text-1)">
+            <span style="width:10px;height:10px;border-radius:50%;
+                         background:{{ item.color }};flex-shrink:0"></span>
+            {{ item.label }}
+          </div>
+          <span style="font-weight:700;font-size:.85rem;color:{{ item.color }}">{{ item.total }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Próximas citas -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="fa-solid fa-clock me-2" style="color:var(--accent)"></i>Próximas citas
       </div>
       <div class="card-body p-0">
         {% for c in proximas_citas %}
-        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom" style="border-color:var(--border)!important">
-          <div style="font-family:'Space Mono',monospace;font-size:.72rem;color:var(--text-2);min-width:80px">
+        <a href="{% url 'agenda:editar_cita' c.pk %}"
+           style="display:flex;align-items:center;gap:.65rem;
+                  padding:.6rem 1rem;border-bottom:1px solid var(--border-light);
+                  text-decoration:none;transition:background .12s"
+           onmouseover="this.style.background='var(--bg-hover)'"
+           onmouseout="this.style.background=''">
+          <div style="font-family:'Roboto Mono',monospace;font-size:.7rem;
+                      color:var(--text-3);min-width:65px">
             {{ c.fecha|date:"d/m" }} {{ c.hora_inicio|time:"H:i" }}
           </div>
-          <div>
-            <div style="font-size:.85rem;font-weight:500">{{ c.paciente.apellidos }} {{ c.paciente.nombres }}</div>
-            <div style="font-size:.75rem;color:var(--text-2)">{{ c.servicio|default:"Sin servicio" }}</div>
+          <div style="min-width:0;flex:1">
+            <div style="font-size:.83rem;font-weight:600;color:var(--text-1);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              {{ c.paciente.apellidos }} {{ c.paciente.nombres }}
+            </div>
+            <div style="font-size:.72rem;color:var(--text-3)">
+              {{ c.doctor.get_full_name|default:"—" }} · {{ c.servicio|default:"—" }}
+            </div>
           </div>
-        </div>
+        </a>
         {% empty %}
-        <p class="text-secondary text-center py-3" style="font-size:.85rem">Sin próximas citas</p>
+        <p class="text-center py-3 mb-0" style="font-size:.85rem;color:var(--text-3)">Sin próximas citas</p>
         {% endfor %}
       </div>
     </div>
 
+    <!-- Acceso rápido admin -->
     <div class="card">
-      <div class="card-header"><i class="bi bi-lightning-charge me-2 text-accent"></i>Acceso rápido</div>
+      <div class="card-header">
+        <i class="fa-solid fa-bolt me-2" style="color:var(--accent)"></i>Acceso rápido
+      </div>
       <div class="card-body">
         <div class="d-grid gap-2">
           <a href="{% url 'pacientes:crear' %}" class="btn btn-outline-secondary btn-sm text-start">
-            <i class="bi bi-person-plus me-2"></i>Registrar nuevo paciente
+            <i class="fa-solid fa-user-plus me-2"></i>Registrar nuevo paciente
           </a>
           <a href="{% url 'agenda:crear_cita' %}" class="btn btn-outline-secondary btn-sm text-start">
-            <i class="bi bi-calendar-plus me-2"></i>Agendar cita
-          </a>
-          <a href="{% url 'facturacion:pago' %}" class="btn btn-outline-secondary btn-sm text-start">
-            <i class="bi bi-cash me-2"></i>Registrar pago
+            <i class="fa-solid fa-calendar-plus me-2"></i>Agendar cita
           </a>
           <a href="{% url 'facturacion:reporte' %}" class="btn btn-outline-secondary btn-sm text-start">
-            <i class="bi bi-bar-chart me-2"></i>Ver reportes
+            <i class="fa-solid fa-chart-bar me-2"></i>Ver reportes
+          </a>
+          <a href="{% url 'personal:lista' %}" class="btn btn-outline-secondary btn-sm text-start">
+            <i class="fa-solid fa-users-gear me-2"></i>Gestionar personal
           </a>
         </div>
       </div>
     </div>
+
   </div>
+  {% endif %}
+
+  <!-- Sidebar para no-admin: próximas citas + accesos -->
+  {% if not es_admin %}
+  <div class="row g-3 mt-0">
+
+    <!-- Próximas citas propias -->
+    <div class="col-12 col-md-7">
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-clock me-2" style="color:var(--accent)"></i>Mis próximas citas
+        </div>
+        <div class="card-body p-0">
+          {% for c in proximas_citas %}
+          <a href="{% url 'agenda:editar_cita' c.pk %}"
+             style="display:flex;align-items:center;gap:.75rem;
+                    padding:.7rem 1rem;border-bottom:1px solid var(--border-light);
+                    text-decoration:none;transition:background .12s"
+             onmouseover="this.style.background='var(--bg-hover)'"
+             onmouseout="this.style.background=''">
+            <div style="width:44px;height:44px;border-radius:11px;flex-shrink:0;
+                        background:var(--accent)14;display:flex;align-items:center;
+                        justify-content:center">
+              <i class="fa-solid fa-calendar" style="color:var(--accent);font-size:.9rem"></i>
+            </div>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:.87rem;font-weight:600;color:var(--text-1);
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                {{ c.paciente.apellidos }} {{ c.paciente.nombres }}
+              </div>
+              <div style="font-size:.75rem;color:var(--text-2)">
+                {{ c.fecha|date:"d/m/Y" }} · {{ c.hora_inicio|time:"H:i" }}
+                {% if c.servicio %} · {{ c.servicio }}{% endif %}
+              </div>
+            </div>
+            <span class="badge-estado estado-{{ c.estado }}" style="flex-shrink:0">{{ c.get_estado_display }}</span>
+          </a>
+          {% empty %}
+          <div class="text-center py-4" style="color:var(--text-3)">
+            <i class="fa-solid fa-calendar-check fa-2x mb-2" style="opacity:.3"></i>
+            <p class="mb-0" style="font-size:.85rem">Sin próximas citas agendadas</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Acceso rápido no-admin -->
+    <div class="col-12 col-md-5">
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-bolt me-2" style="color:var(--accent)"></i>Acceso rápido
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary btn-sm text-start">
+              <i class="fa-solid fa-calendar-plus me-2"></i>Agendar nueva cita
+            </a>
+            <a href="{% url 'pacientes:lista' %}" class="btn btn-outline-secondary btn-sm text-start">
+              <i class="fa-solid fa-users me-2"></i>Ver mis pacientes
+            </a>
+            <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary btn-sm text-start">
+              <i class="fa-solid fa-calendar-days me-2"></i>Ver calendario
+            </a>
+            <a href="{% url 'agenda:hoy' %}" class="btn btn-outline-secondary btn-sm text-start">
+              <i class="fa-solid fa-clock me-2"></i>Agenda de hoy
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

@@ -4,9 +4,11 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .models import PerfilUsuario
 from .forms import PerfilUsuarioForm, CrearUsuarioForm, EditarUsuarioForm, MiPerfilInfoForm, MiPerfilPasswordForm
+from dentalcare.decorators import solo_admin
 
 
 @login_required
+@solo_admin
 def lista_personal(request):
     from agenda.models import Cita
     from django.db.models import Count, Q
@@ -45,6 +47,7 @@ def lista_personal(request):
 
 
 @login_required
+@solo_admin
 def crear_personal(request):
     if request.method == 'POST':
         u_form = CrearUsuarioForm(request.POST)
@@ -76,6 +79,7 @@ def crear_personal(request):
 
 
 @login_required
+@solo_admin
 def editar_personal(request, pk):
     perfil = get_object_or_404(PerfilUsuario, pk=pk)
     user   = perfil.user
@@ -172,6 +176,7 @@ def mi_perfil(request):
 
 
 @login_required
+@solo_admin
 def desactivar_personal(request, pk):
     """Activa o desactiva un usuario (toggle). Solo acepta POST."""
     if request.method == 'POST':

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 import json
+from dentalcare.decorators import solo_admin
 from pacientes.models import Paciente
 from .models import (
     Odontograma, EstadoDiente, HistoriaClinica,
@@ -190,6 +191,7 @@ def actualizar_estado_tratamiento(request, pk):
 
 
 @login_required
+@solo_admin
 def lista_servicios(request):
     mostrar_inactivos = request.GET.get('inactivos') == '1'
     servicios = (
@@ -221,6 +223,7 @@ def lista_servicios(request):
 
 
 @login_required
+@solo_admin
 def editar_servicio(request, pk):
     servicio = get_object_or_404(Servicio, pk=pk)
     if request.method == 'GET':

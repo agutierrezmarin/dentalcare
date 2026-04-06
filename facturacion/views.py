@@ -12,6 +12,7 @@ from .models import Pago, PlanPago, MetodoPago, Presupuesto, ItemPresupuesto, Ti
 from .forms import PagoForm, PlanPagoForm, PresupuestoForm
 from pacientes.models import Paciente
 from clinico.models import Tratamiento
+from dentalcare.decorators import solo_admin
 
 
 @login_required
@@ -93,6 +94,7 @@ def crear_plan_pago(request, tratamiento_pk):
 
 
 @login_required
+@solo_admin
 def reporte_ingresos(request):
     from dateutil.relativedelta import relativedelta
     hoy = date.today()

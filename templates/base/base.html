@@ -11,6 +11,153 @@
   {% load static %}
   <link href="{% static 'css/main.css' %}" rel="stylesheet">
   {% block extra_css %}{% endblock %}
+
+  <style>
+  /* ── Toast notifications ──────────────────────────────── */
+  @keyframes toastIn {
+    from { opacity:0; transform:translateX(60px) scale(.96); }
+    to   { opacity:1; transform:translateX(0) scale(1); }
+  }
+  @keyframes toastOut {
+    from { opacity:1; transform:scale(1); max-height:120px; margin-bottom:.5rem; }
+    to   { opacity:0; transform:scale(.94); max-height:0;   margin-bottom:0; }
+  }
+  .sys-toast {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    border-radius: 14px;
+    border: 1.5px solid;
+    font-size: .875rem;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,.14);
+    animation: toastIn .28s cubic-bezier(.22,1,.36,1) both;
+    backdrop-filter: blur(6px);
+  }
+  .sys-toast.removing {
+    animation: toastOut .25s ease forwards;
+    pointer-events: none;
+  }
+  .sys-toast-icon {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .sys-toast-body { flex: 1; line-height: 1.4; }
+  .sys-toast-close {
+    flex-shrink: 0;
+    background: none; border: none; cursor: pointer;
+    font-size: .78rem; opacity: .55;
+    padding: .2rem .3rem; border-radius: 6px;
+    transition: opacity .15s;
+  }
+  .sys-toast-close:hover { opacity: 1; }
+
+  /* Colores por tipo */
+  .sys-toast-error   { background: #fef2f2; border-color: #f87171; color: #b91c1c; }
+  .sys-toast-error   .sys-toast-icon { background: #fecaca; color: #dc2626; }
+  .sys-toast-warning { background: #fffbeb; border-color: #fbbf24; color: #92400e; }
+  .sys-toast-warning .sys-toast-icon { background: #fde68a; color: #d97706; }
+  .sys-toast-info    { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+  .sys-toast-info    .sys-toast-icon { background: #bfdbfe; color: #2563eb; }
+
+  /* ── Alertas inline en formularios (non_field_errors) ── */
+  .alert-danger {
+    display: flex !important;
+    align-items: flex-start;
+    gap: .65rem;
+    border-radius: 12px !important;
+    border: 1.5px solid #f87171 !important;
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+    font-size: .875rem;
+    font-weight: 500;
+    padding: .75rem 1rem !important;
+  }
+  .alert-danger::before {
+    content: '\f057';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #dc2626;
+    flex-shrink: 0;
+    margin-top: .05rem;
+  }
+  .alert-warning {
+    display: flex !important;
+    align-items: flex-start;
+    gap: .65rem;
+    border-radius: 12px !important;
+    border: 1.5px solid #fbbf24 !important;
+    background: #fffbeb !important;
+    color: #92400e !important;
+    font-size: .875rem;
+    font-weight: 500;
+    padding: .75rem 1rem !important;
+  }
+  .alert-warning::before {
+    content: '\f071';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #d97706;
+    flex-shrink: 0;
+    margin-top: .05rem;
+  }
+  .alert-info {
+    display: flex !important;
+    align-items: flex-start;
+    gap: .65rem;
+    border-radius: 12px !important;
+    border: 1.5px solid #60a5fa !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    font-size: .875rem;
+    font-weight: 500;
+    padding: .75rem 1rem !important;
+  }
+  .alert-info::before {
+    content: '\f05a';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #2563eb;
+    flex-shrink: 0;
+    margin-top: .05rem;
+  }
+
+  /* ── Campos de formulario con error ──────────────────── */
+  @keyframes fieldPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+    50%      { box-shadow: 0 0 0 4px rgba(248,113,113,.35); }
+  }
+  .field-error-input {
+    border-color: #f87171 !important;
+    animation: fieldPulse 1.4s ease-in-out 3;
+  }
+  .field-error-msg {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #dc2626;
+    margin-top: .3rem;
+  }
+  .field-error-icon {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .6rem;
+    animation: fieldPulse 1.4s ease-in-out 3;
+  }
+  </style>
 </head>
 <body>
 
@@ -56,16 +203,13 @@
        class="nav-link nav-link-calendar">
       <i class="fa-solid fa-calendar-days"></i><span>Calendario</span>
     </a>
+    {% if request.user.perfil.rol == 'admin' %}
     <a href="{% url 'clinico:servicios' %}" data-label="Servicios"
        class="nav-link nav-link-servicios {% if 'clinico/servicios' in request.path %}active{% endif %}">
       <i class="fa-solid fa-stethoscope"></i><span>Servicios</span>
     </a>
 
     <div class="nav-section-title">Finanzas</div>
-    <a href="{% url 'facturacion:pago' %}" data-label="Cobros"
-       class="nav-link nav-link-cobros {% if 'facturacion' in request.path %}active{% endif %}">
-      <i class="fa-solid fa-money-bill-wave"></i><span>Cobros</span>
-    </a>
     <a href="{% url 'facturacion:reporte' %}" data-label="Reportes"
        class="nav-link nav-link-reporte">
       <i class="fa-solid fa-chart-bar"></i><span>Reportes</span>
@@ -80,6 +224,7 @@
        class="nav-link nav-link-personal {% if 'personal' in request.path %}active{% endif %}">
       <i class="fa-solid fa-user-doctor"></i><span>Personal</span>
     </a>
+    {% endif %}
 
   </nav>
 
@@ -126,8 +271,8 @@
     </button>
     <div class="topbar-breadcrumb">{% block breadcrumb %}{% endblock %}</div>
 
-    <!-- Búsqueda global (oculta en móvil, visible en desktop) -->
-    <div class="topbar-search" id="topbarSearch" style="position:relative;flex:0 0 230px">
+    <!-- Búsqueda global — solo desktop -->
+    <div class="topbar-search d-none d-md-block" id="topbarSearch" style="position:relative;flex:0 0 230px">
       <input type="text" id="searchGlobal" class="form-control form-control-sm"
              placeholder="Buscar paciente…"
              style="border-radius:20px;padding-right:2.2rem;">
@@ -141,10 +286,10 @@
     </div>
 
     <div class="topbar-actions">
-      <!-- Icono búsqueda solo en móvil -->
+      <!-- Icono búsqueda — abre modal en móvil -->
       <button class="btn btn-outline-secondary btn-sm d-md-none"
-              id="btnSearchToggle" title="Buscar"
-              onclick="toggleMobileSearch()" style="display:none!important">
+              title="Buscar"
+              data-bs-toggle="modal" data-bs-target="#modalSearchMobile">
         <i class="fa-solid fa-magnifying-glass"></i>
       </button>
       <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary btn-sm" title="Nueva cita">
@@ -156,20 +301,123 @@
     </div>
   </header>
 
-  <!-- Alerts -->
-  <div class="px-4 pt-3">
+  <!-- Toast stack (mensajes no-success) -->
+  <div id="toastStack" aria-live="polite" aria-atomic="false"
+       style="position:fixed;top:1rem;right:1rem;z-index:9999;
+              display:flex;flex-direction:column;gap:.5rem;min-width:300px;max-width:420px">
     {% for m in messages %}
-    <div class="alert alert-{{ m.tags }} alert-dismissible fade show" role="alert">
-      {{ m }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    {% if m.tags != 'success' %}
+    {% if m.tags == 'error' or m.tags == 'danger' %}
+      <div class="sys-toast sys-toast-error" role="alert">
+        <div class="sys-toast-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div class="sys-toast-body">{{ m }}</div>
+        <button class="sys-toast-close" onclick="this.closest('.sys-toast').remove()" aria-label="Cerrar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    {% elif m.tags == 'warning' %}
+      <div class="sys-toast sys-toast-warning" role="alert">
+        <div class="sys-toast-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="sys-toast-body">{{ m }}</div>
+        <button class="sys-toast-close" onclick="this.closest('.sys-toast').remove()" aria-label="Cerrar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    {% elif m.tags == 'info' %}
+      <div class="sys-toast sys-toast-info" role="alert">
+        <div class="sys-toast-icon"><i class="fa-solid fa-circle-info"></i></div>
+        <div class="sys-toast-body">{{ m }}</div>
+        <button class="sys-toast-close" onclick="this.closest('.sys-toast').remove()" aria-label="Cerrar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    {% else %}
+      <div class="sys-toast sys-toast-info" role="alert">
+        <div class="sys-toast-icon"><i class="fa-solid fa-circle-info"></i></div>
+        <div class="sys-toast-body">{{ m }}</div>
+        <button class="sys-toast-close" onclick="this.closest('.sys-toast').remove()" aria-label="Cerrar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    {% endif %}
+    {% endif %}
     {% endfor %}
   </div>
+
+  <!-- Modal de éxito (primer success message) -->
+  {% for m in messages %}{% if m.tags == 'success' %}
+  <div class="modal fade" id="modalSuccessMsg" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:380px">
+      <div class="modal-content" style="border:none;border-radius:18px;overflow:hidden;
+           box-shadow:0 20px 60px rgba(0,0,0,.25)">
+        <div class="modal-body text-center px-4 py-5">
+          <div style="width:72px;height:72px;border-radius:50%;
+                      background:linear-gradient(135deg,#22c55e,#16a34a);
+                      display:flex;align-items:center;justify-content:center;
+                      margin:0 auto 1.25rem;font-size:2rem;color:#fff;
+                      box-shadow:0 8px 24px rgba(34,197,94,.35)">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h5 class="fw-bold mb-2" style="color:var(--text-1)">¡Operación exitosa!</h5>
+          <p style="color:var(--text-2);font-size:.88rem;margin-bottom:1.5rem">{{ m }}</p>
+          <button type="button" class="btn btn-success px-5 fw-semibold" data-bs-dismiss="modal">
+            <i class="fa-solid fa-check me-1"></i>Aceptar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSuccessMsg')).show();
+  });
+  </script>
+  {% endif %}{% endfor %}
 
   <!-- Page content -->
   <main class="page-content">
     {% block content %}{% endblock %}
   </main>
+</div>
+
+<!-- Modal búsqueda móvil -->
+<div class="modal fade" id="modalSearchMobile" tabindex="-1" aria-label="Buscar">
+  <div class="modal-dialog modal-fullscreen-sm-down" style="margin:0;max-width:100%">
+    <div class="modal-content" style="border:none;border-radius:0 0 20px 20px;
+         background:var(--bg-surface);box-shadow:0 12px 40px rgba(0,0,0,.2)">
+
+      <!-- Cabecera con input -->
+      <div class="modal-header px-3 py-2" style="border-bottom:1.5px solid var(--border-light);gap:.5rem">
+        <div style="position:relative;flex:1">
+          <i class="fa-solid fa-magnifying-glass"
+             style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);
+                    color:var(--accent);font-size:.9rem;pointer-events:none"></i>
+          <input type="text" id="searchGlobalMobile"
+                 class="form-control"
+                 placeholder="Buscar paciente por nombre o C.I…"
+                 autocomplete="off"
+                 style="padding-left:2.5rem;border-radius:20px;
+                        border:1.5px solid var(--border);font-size:.92rem">
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary px-3"
+                data-bs-dismiss="modal" style="border-radius:20px;flex-shrink:0">
+          Cancelar
+        </button>
+      </div>
+
+      <!-- Resultados -->
+      <div class="modal-body p-0" style="max-height:60vh;overflow-y:auto">
+        <div id="searchResultsMobile">
+          <!-- estado inicial -->
+          <div id="searchMobileHint" class="text-center py-5" style="color:var(--text-3)">
+            <i class="fa-solid fa-magnifying-glass fa-2x mb-3" style="opacity:.35"></i>
+            <div style="font-size:.85rem">Escribe al menos 2 caracteres para buscar</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- Modal confirmación logout -->
@@ -215,11 +463,7 @@
     <i class="fa-solid fa-users"></i>
     <span>Pacientes</span>
   </a>
-  <a href="{% url 'facturacion:pago' %}"
-     class="mbn-item {% if 'facturacion' in request.path %}active{% endif %}">
-    <i class="fa-solid fa-money-bill-wave"></i>
-    <span>Cobros</span>
-  </a>
+
   <button class="mbn-item mbn-menu" onclick="toggleSidebar()" aria-label="Menú">
     <i class="fa-solid fa-bars"></i>
     <span>Menú</span>
@@ -229,29 +473,132 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% load static %}
 <script src="{% static 'js/main.js' %}"></script>
+<script></script>
+{% block extra_js %}{% endblock %}
 <script>
-// Búsqueda móvil toggle
-function toggleMobileSearch() {
-  const s = document.getElementById('topbarSearch');
-  s.classList.toggle('sb-search-open');
-  if (s.classList.contains('sb-search-open')) {
-    document.getElementById('searchGlobal').focus();
-  }
-}
-// Mostrar botón búsqueda solo en móvil
+/* ── Búsqueda modal móvil ── */
 (function () {
-  const btn = document.getElementById('btnSearchToggle');
-  if (btn && window.innerWidth <= 768) btn.style.display = '';
-  window.addEventListener('resize', () => {
-    if (!btn) return;
-    btn.style.display = window.innerWidth <= 768 ? '' : 'none !important';
-    if (window.innerWidth > 768) {
-      document.getElementById('topbarSearch').classList.remove('sb-search-open');
+  const modalEl  = document.getElementById('modalSearchMobile');
+  const inputMob = document.getElementById('searchGlobalMobile');
+  const resMob   = document.getElementById('searchResultsMobile');
+  const hint     = document.getElementById('searchMobileHint');
+  if (!modalEl || !inputMob) return;
+
+  let timer;
+
+  function renderResults(data) {
+    if (!data.resultados.length) {
+      resMob.innerHTML = `
+        <div class="text-center py-5" style="color:var(--text-3)">
+          <i class="fa-solid fa-face-frown fa-2x mb-3" style="opacity:.35"></i>
+          <div style="font-size:.85rem">Sin resultados para "<strong>${inputMob.value}</strong>"</div>
+        </div>`;
+      return;
     }
+    resMob.innerHTML = data.resultados.map(r => `
+      <a href="${r.url}"
+         style="display:flex;align-items:center;gap:.75rem;
+                padding:.85rem 1.1rem;text-decoration:none;
+                border-bottom:1px solid var(--border-light);
+                transition:background .12s"
+         onmouseover="this.style.background='var(--bg-hover)'"
+         onmouseout="this.style.background=''">
+        <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;
+                    background:var(--accent)18;display:flex;align-items:center;justify-content:center">
+          <i class="fa-solid fa-user" style="font-size:.8rem;color:var(--accent)"></i>
+        </div>
+        <div style="min-width:0">
+          <div style="font-weight:600;font-size:.88rem;color:var(--text-1);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.texto}</div>
+          <div style="font-size:.75rem;color:var(--text-2)">${r.subtexto}</div>
+        </div>
+        <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-3);flex-shrink:0"></i>
+      </a>`).join('');
+  }
+
+  inputMob.addEventListener('input', function () {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    if (q.length < 2) {
+      resMob.innerHTML = '';
+      if (hint) { hint.style.display = ''; resMob.appendChild(hint); }
+      return;
+    }
+    resMob.innerHTML = `
+      <div class="text-center py-4" style="color:var(--text-3)">
+        <i class="fa-solid fa-circle-notch fa-spin fa-lg"></i>
+      </div>`;
+    timer = setTimeout(async () => {
+      try {
+        const resp = await fetch('/buscar/?q=' + encodeURIComponent(q));
+        const data = await resp.json();
+        renderResults(data);
+      } catch(e) {
+        resMob.innerHTML = '<div class="text-center py-4 text-danger" style="font-size:.85rem">Error al buscar</div>';
+      }
+    }, 280);
+  });
+
+  // Al abrir el modal, enfocar input y limpiar
+  modalEl.addEventListener('shown.bs.modal', function () {
+    inputMob.value = '';
+    resMob.innerHTML = '';
+    if (hint) resMob.appendChild(hint);
+    hint && (hint.style.display = '');
+    inputMob.focus();
+  });
+
+  // Al hacer clic en un resultado, cerrar modal
+  resMob.addEventListener('click', function (e) {
+    const link = e.target.closest('a');
+    if (link) bootstrap.Modal.getInstance(modalEl)?.hide();
+  });
+})();
+
+/* ── Auto-dismiss toasts ── */
+(function () {
+  function dismissToast(t) {
+    t.classList.add('removing');
+    t.addEventListener('animationend', () => t.remove(), { once: true });
+  }
+  document.querySelectorAll('.sys-toast').forEach(function (t) {
+    setTimeout(function () { dismissToast(t); }, 5000);
+  });
+})();
+
+/* ── Marcar campos con error ── */
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    // Busca elementos .text-danger que tengan font-size .78rem (los de form errors)
+    document.querySelectorAll('.text-danger').forEach(function (el) {
+      // Solo los mensajes de error de campo (no alertas globales)
+      var style = window.getComputedStyle(el);
+      if (parseFloat(style.fontSize) <= 13) {
+        // Aplicar clase de error al campo anterior (input/select/textarea)
+        var wrap = el.closest('.input-icon-wrap, .mb-3, .col-12, .col-6, .col-sm-6, .col-sm-4');
+        if (wrap) {
+          var input = wrap.querySelector('input, select, textarea');
+          if (input) input.classList.add('field-error-input');
+        }
+        // Reemplazar el texto plano con versión con icono
+        var txt = el.textContent.trim();
+        if (txt) {
+          el.classList.add('field-error-msg');
+          el.innerHTML = '<span class="field-error-icon"><i class="fa-solid fa-exclamation"></i></span>' + txt;
+        }
+      }
+    });
+    // También los .invalid-feedback de Bootstrap
+    document.querySelectorAll('.invalid-feedback').forEach(function (el) {
+      var txt = el.textContent.trim();
+      if (txt) {
+        el.classList.add('field-error-msg');
+        el.innerHTML = '<span class="field-error-icon"><i class="fa-solid fa-exclamation"></i></span>' + txt;
+      }
+    });
   });
 })();
 </script>
-{% block extra_js %}{% endblock %}
 <script>
 /* ── Breadcrumb: muestra solo el último segmento en móvil ── */
 (function () {

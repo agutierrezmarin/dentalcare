@@ -122,6 +122,35 @@
   .form-actions .btn { flex: 1; justify-content: center; }
 }
 
+/* ── Panel de disponibilidad ─────────────────── */
+.avail-panel {
+  border-radius: var(--radius); padding: .8rem 1rem;
+  margin-bottom: 1rem; font-size: .84rem;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-surface);
+  display: none;
+}
+.avail-panel.ok    { border-color: #22c55e40; background: #22c55e0a; }
+.avail-panel.warn  { border-color: #f8717140; background: #f871710a; }
+.avail-panel.loading { border-color: var(--border-light); }
+.avail-title { font-weight: 700; display: flex; align-items: center; gap: .45rem; margin-bottom: .4rem; }
+.avail-docs  { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; }
+.avail-doc-btn {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25em .7em; border-radius: 20px; cursor: pointer;
+  font-size: .75rem; font-weight: 600; border: 1.5px solid;
+  background: transparent; transition: all .12s;
+}
+.avail-doc-btn.libre {
+  border-color: #22c55e50; color: #22c55e;
+  background: #22c55e10;
+}
+.avail-doc-btn.libre:hover { background: #22c55e22; }
+.avail-doc-btn.ocupado {
+  border-color: var(--border); color: var(--text-3);
+  cursor: default; opacity: .6;
+}
+
 /* ── Info sidebar ─────────────────────────────── */
 .info-row {
   display: flex;
@@ -170,6 +199,9 @@
   <div class="col-12 col-lg-8">
     <form method="post" novalidate>
       {% csrf_token %}
+      {# Campos no editables en modo edición — se envían como hidden #}
+      <input type="hidden" name="paciente" value="{{ cita.paciente.pk }}">
+      {% if cita.tratamiento %}<input type="hidden" name="tratamiento" value="{{ cita.tratamiento.pk }}">{% endif %}
 
       <!-- Doctor / Sillón -->
       <div class="card mb-3">
@@ -263,6 +295,13 @@
         </div>
       </div>
 
+      <!-- Panel disponibilidad -->
+      <div id="availPanel" class="avail-panel">
+        <div class="avail-title" id="availTitle"></div>
+        <div id="availMsg" style="font-size:.8rem;color:var(--text-2)"></div>
+        <div id="availDocs" class="avail-docs"></div>
+      </div>
+
       <!-- Motivo / Notas -->
       <div class="card mb-3">
         <div class="form-section-header">
@@ -304,7 +343,7 @@
 
       <div class="form-actions">
         <a href="{% url 'agenda:calendario' %}" class="btn btn-outline-secondary">
-          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+          <i class="fa-solid fa-arrow-left me-1"></i>Volver
         </a>
         <button type="submit" class="btn btn-primary px-4">
           <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
@@ -743,6 +782,15 @@
       </div>
     </div>
 
+    <!-- Panel disponibilidad (crear) -->
+    <div class="col-12">
+      <div id="availPanel" class="avail-panel">
+        <div class="avail-title" id="availTitle"></div>
+        <div id="availMsg" style="font-size:.8rem;color:var(--text-2)"></div>
+        <div id="availDocs" class="avail-docs"></div>
+      </div>
+    </div>
+
     <!-- ── Observaciones ── -->
     <div class="col-12">
       <div class="card">
@@ -827,4 +875,245 @@
 
 {% endif %}
 
+<!-- ══ Modal confirmación de cita ══════════════════════════════════ -->
+<div class="modal fade" id="modalConfirmCita" tabindex="-1" aria-labelledby="modalConfirmTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+    <div class="modal-content" style="border:none;border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+
+      <!-- Header -->
+      <div class="modal-header px-4 pt-4 pb-3" style="border:none;background:linear-gradient(135deg,var(--accent),var(--accent-mid));color:#fff">
+        <div class="d-flex align-items-center gap-3">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.2);
+                      display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="modalConfirmTitle">Confirmar cita</h5>
+            <div style="font-size:.75rem;opacity:.85" id="confirmSubtitle">Revisa los datos antes de guardar</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Body: resumen -->
+      <div class="modal-body px-4 py-3" id="confirmModalBody">
+        <!-- llenado por JS -->
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer px-4 pb-4 pt-0" style="border:none;gap:.6rem">
+        <button type="button" class="btn btn-outline-secondary flex-grow-1" data-bs-dismiss="modal">
+          <i class="fa-solid fa-pen me-1"></i>Revisar
+        </button>
+        <button type="button" class="btn btn-primary flex-grow-1" id="btnConfirmSubmit">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Verificación de disponibilidad en tiempo real ── */
+(function () {
+  const DISP_URL = '{% url "agenda:disponibilidad" %}';
+  const CITA_ID  = '{% if cita %}{{ cita.pk }}{% endif %}';
+
+  const panel   = document.getElementById('availPanel');
+  const titleEl = document.getElementById('availTitle');
+  const msgEl   = document.getElementById('availMsg');
+  const docsEl  = document.getElementById('availDocs');
+  if (!panel) return;
+
+  const fDoctor = document.getElementById('id_doctor');
+  const fFecha  = document.getElementById('id_fecha');
+  const fIni    = document.getElementById('id_hora_inicio');
+  const fFin    = document.getElementById('id_hora_fin');
+  if (!fDoctor || !fFecha || !fIni || !fFin) return;
+
+  let timer = null;
+  function check() { clearTimeout(timer); timer = setTimeout(doCheck, 380); }
+
+  function doCheck() {
+    const doctor_id   = fDoctor.value;
+    const fecha       = fFecha.value;
+    const hora_inicio = fIni.value;
+    const hora_fin    = fFin.value;
+
+    if (!fecha || !hora_inicio || !hora_fin) { panel.style.display = 'none'; return; }
+
+    if (hora_inicio >= hora_fin) {
+      showPanel('warn',
+        '<i class="fa-solid fa-triangle-exclamation"></i> Horario inválido',
+        'La hora de fin debe ser posterior a la hora de inicio.', []);
+      return;
+    }
+
+    panel.className = 'avail-panel loading';
+    panel.style.display = '';
+    titleEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="color:var(--text-3)"></i> Verificando disponibilidad…';
+    msgEl.textContent = '';
+    docsEl.innerHTML  = '';
+
+    const params = new URLSearchParams({ doctor_id, fecha, hora_inicio, hora_fin });
+    if (CITA_ID) params.append('cita_id', CITA_ID);
+
+    fetch(DISP_URL + '?' + params)
+      .then(r => r.json())
+      .then(data => {
+        if (data.conflicto) {
+          showPanel('warn',
+            '<i class="fa-solid fa-circle-xmark" style="color:#f87171"></i> Conflicto de horario',
+            data.conflicto_msg, data.doctores);
+        } else if (doctor_id) {
+          const nombre = fDoctor.options[fDoctor.selectedIndex]?.text || '';
+          showPanel('ok',
+            '<i class="fa-solid fa-circle-check" style="color:#22c55e"></i> Doctor disponible',
+            nombre + ' no tiene citas en este horario.', data.doctores);
+        } else {
+          showPanel('info',
+            '<i class="fa-solid fa-calendar-check" style="color:#4e9ff5"></i> Disponibilidad',
+            'Selecciona un doctor para verificar conflictos.', data.doctores);
+        }
+      })
+      .catch(() => { panel.style.display = 'none'; });
+  }
+
+  function showPanel(tipo, title, msg, doctores) {
+    panel.className = 'avail-panel' + (tipo === 'ok' ? ' ok' : tipo === 'warn' ? ' warn' : '');
+    panel.style.display = '';
+    titleEl.innerHTML   = title;
+    msgEl.textContent   = msg;
+    renderDoctores(doctores);
+  }
+
+  function renderDoctores(doctores) {
+    if (!doctores || !doctores.length) { docsEl.innerHTML = ''; return; }
+    const libres   = doctores.filter(d => d.libre);
+    const ocupados = doctores.filter(d => !d.libre);
+    let html = '';
+    if (libres.length) {
+      html += '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);width:100%;margin-bottom:.3rem">Disponibles — clic para seleccionar</div>';
+      libres.forEach(d => {
+        html += `<button type="button" class="avail-doc-btn libre" onclick="selectDoctor(${d.id})">
+          <i class="fa-solid fa-circle-check" style="font-size:.7rem"></i>${d.nombre}
+        </button>`;
+      });
+    }
+    if (ocupados.length) {
+      html += '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);width:100%;margin:.5rem 0 .3rem">Ocupados en este horario</div>';
+      ocupados.forEach(d => {
+        html += `<span class="avail-doc-btn ocupado">
+          <i class="fa-solid fa-circle-xmark" style="font-size:.7rem"></i>${d.nombre}
+        </span>`;
+      });
+    }
+    docsEl.innerHTML = html;
+  }
+
+  window.selectDoctor = function (id) {
+    fDoctor.value = id;
+    fDoctor.dispatchEvent(new Event('change'));
+  };
+
+  [fDoctor, fFecha, fIni, fFin].forEach(el => el.addEventListener('change', check));
+  [fIni, fFin].forEach(el => el.addEventListener('input', check));
+
+  // Verificar al cargar si ya hay valores
+  if (fFecha.value && fIni.value && fFin.value) doCheck();
+})();
+</script>
+
+<script>
+/* ── Modal de confirmación de cita ── */
+(function () {
+  const modal = new bootstrap.Modal(document.getElementById('modalConfirmCita'));
+  const body  = document.getElementById('confirmModalBody');
+  const btnConfirm = document.getElementById('btnConfirmSubmit');
+  let   formToSubmit = null;
+
+  function getSelectText(selectId) {
+    const el = document.getElementById(selectId);
+    if (!el) return '—';
+    return el.options[el.selectedIndex]?.text?.trim() || '—';
+  }
+  function getVal(inputId) {
+    const el = document.getElementById(inputId);
+    return el ? el.value : '';
+  }
+  function formatFecha(str) {
+    if (!str) return '—';
+    const [y, m, d] = str.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  function formatHora(str) { return str || '—'; }
+
+  function row(icon, color, label, value) {
+    return `
+    <div style="display:flex;align-items:center;gap:.7rem;padding:.5rem 0;
+                border-bottom:1px solid var(--border-light)">
+      <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
+                  background:${color}18;display:flex;align-items:center;justify-content:center">
+        <i class="fa-solid ${icon}" style="font-size:.8rem;color:${color}"></i>
+      </div>
+      <div style="min-width:0">
+        <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3)">${label}</div>
+        <div style="font-size:.88rem;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${value}</div>
+      </div>
+    </div>`;
+  }
+
+  function buildBody(isEdit) {
+    const paciente  = isEdit
+      ? document.querySelector('.info-row .fw-semibold')?.textContent?.trim() || '—'
+      : getSelectText('id_paciente');
+    const doctor    = getSelectText('id_doctor');
+    const servicio  = getSelectText('id_servicio');
+    const fecha     = formatFecha(getVal('id_fecha'));
+    const hIni      = formatHora(getVal('id_hora_inicio'));
+    const hFin      = formatHora(getVal('id_hora_fin'));
+    const motivo    = getVal('id_motivo') || '—';
+
+    let html = '<div style="padding:.25rem 0">';
+    html += row('fa-user',        '#8b5cf6', 'Paciente',        paciente);
+    html += row('fa-user-doctor', '#4e9ff5', 'Doctor',          doctor);
+    html += row('fa-stethoscope', '#ec4899', 'Servicio',        servicio);
+    html += row('fa-calendar',    '#f59e0b', 'Fecha',           fecha);
+    html += row('fa-clock',       '#22c55e', 'Horario',         `${hIni} — ${hFin}`);
+    if (motivo && motivo !== '—')
+      html += row('fa-comment-medical', '#8b5cf6', 'Motivo', motivo);
+    html += '</div>';
+    return html;
+  }
+
+  // Interceptar botones submit
+  document.querySelectorAll('form button[type="submit"]').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      formToSubmit = this.closest('form');
+      const isEdit = !!document.querySelector('#estadoBtns, #estadoActual');
+      document.getElementById('confirmSubtitle').textContent =
+        isEdit ? 'Revisa los cambios antes de guardar' : 'Revisa los datos antes de agendar';
+      document.getElementById('modalConfirmTitle').innerHTML =
+        isEdit
+          ? '<i class="fa-solid fa-calendar-pen me-2"></i>Guardar cambios'
+          : '<i class="fa-solid fa-calendar-check me-2"></i>Confirmar cita';
+      body.innerHTML = buildBody(isEdit);
+      modal.show();
+    });
+  });
+
+  // Al confirmar en el modal → submit real
+  btnConfirm.addEventListener('click', function () {
+    if (!formToSubmit) return;
+    btnConfirm.disabled = true;
+    btnConfirm.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i>Guardando…';
+    // pequeño delay para que el modal se vea, luego submit
+    setTimeout(() => formToSubmit.submit(), 200);
+  });
+})();
+</script>
 {% endblock %}

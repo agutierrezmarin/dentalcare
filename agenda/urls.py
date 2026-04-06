@@ -13,4 +13,5 @@ urlpatterns = [
     path('citas/<int:pk>/estado/', views.cambiar_estado_cita, name='estado_cita'),
     path('citas/<int:pk>/mover/',   views.mover_cita,   name='mover_cita'),
     path('citas/<int:pk>/cobrar/',  views.cobrar_cita,  name='cobrar_cita'),
+    path('citas/disponibilidad/',   views.verificar_disponibilidad, name='disponibilidad'),
 ]

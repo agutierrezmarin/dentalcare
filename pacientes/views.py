@@ -14,8 +14,15 @@ def lista_pacientes(request):
 
     q   = request.GET.get('q', '')
     hoy = timezone.now().date()
+    es_admin = hasattr(request.user, 'perfil') and request.user.perfil.rol == 'admin'
 
     qs = Paciente.objects.filter(activo=True).order_by('apellidos', 'nombres')
+
+    # No-admin solo ve pacientes con quienes ha tenido citas
+    if not es_admin:
+        ids_propios = Cita.objects.filter(doctor=request.user).values_list('paciente_id', flat=True).distinct()
+        qs = qs.filter(pk__in=ids_propios)
+
     if q:
         qs = qs.filter(
             Q(nombres__icontains=q) | Q(apellidos__icontains=q) |

@@ -3,9 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Insumo, CategoriaInsumo, MovimientoInventario
 from .forms import InsumoForm, MovimientoForm
+from dentalcare.decorators import solo_admin
 
 
 @login_required
+@solo_admin
 def lista_insumos(request):
     insumos = Insumo.objects.filter(activo=True).select_related('categoria')
     alertas = [i for i in insumos if i.necesita_reposicion]
@@ -15,6 +17,7 @@ def lista_insumos(request):
 
 
 @login_required
+@solo_admin
 def crear_insumo(request):
     if request.method == 'POST':
         form = InsumoForm(request.POST)
@@ -28,6 +31,7 @@ def crear_insumo(request):
 
 
 @login_required
+@solo_admin
 def movimiento(request, pk):
     insumo = get_object_or_404(Insumo, pk=pk)
     if request.method == 'POST':
