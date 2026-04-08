@@ -1,94 +1,95 @@
-# Dos proyectos Django en el mismo VPS OVH — Sin afectar el proyecto existente
+# Dos proyectos Django en el mismo VPS OVH — Sin dominio, solo IP
 
-> **Proyecto 1 (ya desplegado):** Tienda de Abarrotes  
-> **Proyecto 2 (nuevo):** AdmiDent — Sistema Dental  
+> **Proyecto 1 (ya desplegado):** Tienda de Abarrotes → `http://66.70.189.161/`  
+> **Proyecto 2 (nuevo):** AdmiDent — Sistema Dental → `http://66.70.189.161:8080/`  
+> **IP del servidor:** `66.70.189.161`  
 > **OS:** Debian 13 / Ubuntu 24.04  
-> **Stack compartido:** Nginx · PostgreSQL · Certbot  
-> **Claves:** cada proyecto tiene su propio socket, servicio, BD y entorno virtual
+> **Stack compartido:** Nginx · PostgreSQL
 
 ---
 
-## Cómo conviven los dos proyectos
+## Estrategia: puertos diferentes
+
+Sin dominio no es posible usar `server_name` para separar proyectos en el puerto 80.
+La solución es asignar un **puerto diferente** a cada proyecto:
 
 ```
 Internet
    │
    ▼
- Nginx  ◄─── un solo proceso, escucha en :80 y :443
+ Nginx  ◄─── escucha en :80 y :8080
    │
-   ├── tienda.tudominio.com  ──►  /run/tienda.sock  ──►  Gunicorn (tienda)
+   ├── 66.70.189.161:80    ──►  /run/tienda.sock     ──►  Gunicorn (tienda)    ← YA FUNCIONA
    │
-   └── dental.tudominio.com  ──►  /run/dentalcare.sock  ──►  Gunicorn (dentalcare)
+   └── 66.70.189.161:8080  ──►  /run/dentalcare.sock ──►  Gunicorn (dentalcare) ← NUEVO
 
 PostgreSQL
-   ├── tienda_db       ← usuario: tienda_user
-   └── dentalcare_db   ← usuario: dentalcare_user
+   ├── tienda_db       ← usuario: tienda_user   (sin cambios)
+   └── dentalcare_db   ← usuario: dentalcare_user (nuevo)
 ```
 
 **Lo que NO se toca del proyecto existente:**
-- Su servicio Gunicorn (`tienda.service`)
-- Su bloque Nginx (`/etc/nginx/sites-available/tienda`)
+- Su servicio Gunicorn y socket
+- Su bloque Nginx en puerto 80
 - Su base de datos y usuario PostgreSQL
 - Su directorio y entorno virtual
 
-**Lo que se agrega:**
-- Un nuevo socket/servicio para AdmiDent
-- Un nuevo bloque Nginx para AdmiDent
-- Una nueva BD PostgreSQL para AdmiDent
-
 ---
 
-## Paso 1 — Verificar el estado actual del servidor
+## Paso 1 — Verificar el estado actual
 
-Antes de tocar nada, confirmar que el proyecto existente funciona:
+Antes de tocar nada, confirmar que la tienda sigue funcionando:
 
 ```bash
-sudo systemctl status tienda        # o el nombre de tu servicio actual
 sudo systemctl status nginx
 sudo systemctl status postgresql
+curl -I http://66.70.189.161/
+# Debe responder HTTP 200 o 302
 ```
 
-Si todo está `active (running)`, proceder. Si algo falla, resolverlo primero.
-
-Ver los sockets activos para no usar un nombre que ya exista:
+Ver los sockets activos y los bloques Nginx habilitados:
 
 ```bash
 ls /run/*.sock
+ls /etc/nginx/sites-enabled/
 ```
 
-Ver los bloques Nginx activos:
+Anotar el nombre del servicio Gunicorn de la tienda (lo necesitarás para no confundirte):
 
 ```bash
-ls /etc/nginx/sites-enabled/
+sudo systemctl list-units --type=service | grep -i gunicorn
 ```
 
 ---
 
-## Paso 2 — Crear usuario del sistema para AdmiDent
+## Paso 2 — Abrir el puerto 8080 en el firewall
 
-Mantener cada proyecto bajo su propio usuario evita que uno pueda leer archivos del otro:
+```bash
+sudo ufw allow 8080/tcp
+sudo ufw status
+# Debe mostrar 8080/tcp ALLOW
+```
+
+---
+
+## Paso 3 — Crear usuario del sistema para AdmiDent
 
 ```bash
 sudo adduser dentalcare
 sudo usermod -aG www-data dentalcare
 ```
 
-> Si prefieres usar el mismo usuario que el proyecto existente, sáltate este paso y reemplaza
-> `dentalcare` por tu usuario actual en todos los comandos.
-
 ---
 
-## Paso 3 — Crear la base de datos PostgreSQL para AdmiDent
+## Paso 4 — Crear la base de datos PostgreSQL para AdmiDent
 
-PostgreSQL ya está corriendo. Solo hay que agregar una BD y un usuario nuevos,
-**sin tocar la BD del proyecto existente**:
+PostgreSQL ya está corriendo. Solo agregar una BD nueva, **sin tocar la de la tienda**:
 
 ```bash
 sudo -u postgres psql
 ```
 
 ```sql
--- Solo crear lo nuevo, NO modificar nada existente
 CREATE DATABASE dentalcare_db;
 CREATE USER dentalcare_user WITH PASSWORD 'PASSWORD_MUY_SEGURO';
 ALTER ROLE dentalcare_user SET client_encoding TO 'utf8';
@@ -98,7 +99,7 @@ GRANT ALL PRIVILEGES ON DATABASE dentalcare_db TO dentalcare_user;
 \q
 ```
 
-Verificar que la BD del proyecto 1 sigue intacta:
+Verificar que la BD de la tienda sigue intacta:
 
 ```bash
 sudo -u postgres psql -c "\l"
@@ -107,21 +108,25 @@ sudo -u postgres psql -c "\l"
 
 ---
 
-## Paso 4 — Subir el código de AdmiDent
+## Paso 5 — Subir el código de AdmiDent
 
 ```bash
 su - dentalcare
 cd /home/dentalcare
 git clone https://github.com/TU_USUARIO/dentalcare.git app
-# o copiar por SCP desde tu máquina local:
-# scp -r ./dentalcare dentalcare@IP:/home/dentalcare/app
+```
+
+O copiar desde tu máquina local por SCP:
+
+```bash
+# Ejecutar en tu máquina local (Linux/Mac)
+scp -r /home/alejandro/Documents/proyectos-django/dentalcare \
+       dentalcare@66.70.189.161:/home/dentalcare/app
 ```
 
 ---
 
-## Paso 5 — Entorno virtual de AdmiDent
-
-Cada proyecto tiene su propio `venv` — **nunca compartir entornos virtuales**:
+## Paso 6 — Entorno virtual y dependencias
 
 ```bash
 cd /home/dentalcare/app
@@ -134,16 +139,16 @@ pip install gunicorn
 
 ---
 
-## Paso 6 — Archivo .env de AdmiDent
+## Paso 7 — Archivo .env de AdmiDent
 
 ```bash
 nano /home/dentalcare/.env
 ```
 
 ```ini
-SECRET_KEY=genera-una-clave-nueva-diferente-a-la-del-otro-proyecto
+SECRET_KEY=genera-una-clave-nueva-aqui
 DEBUG=False
-ALLOWED_HOSTS=dental.tudominio.com,www.dental.tudominio.com
+ALLOWED_HOSTS=66.70.189.161
 
 DB_NAME=dentalcare_db
 DB_USER=dentalcare_user
@@ -156,12 +161,15 @@ DB_PORT=5432
 chmod 600 /home/dentalcare/.env
 ```
 
-> ⚠️ La `SECRET_KEY` debe ser **diferente** a la del proyecto existente.  
-> Generar una: `python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
+Generar una `SECRET_KEY` segura:
+
+```bash
+python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
 
 ---
 
-## Paso 7 — Migraciones y estáticos de AdmiDent
+## Paso 8 — Migraciones, estáticos y superusuario
 
 ```bash
 cd /home/dentalcare/app
@@ -177,11 +185,11 @@ chmod 755 media
 
 ---
 
-## Paso 8 — Servicio Gunicorn para AdmiDent
+## Paso 9 — Servicio Gunicorn para AdmiDent
 
-Este es el punto clave: **nombre de socket y servicio completamente diferentes** al del proyecto existente.
+Nombres de socket y servicio completamente diferentes a los de la tienda.
 
-### 8.1 Socket
+### 9.1 Socket
 
 ```bash
 sudo nano /etc/systemd/system/dentalcare.socket
@@ -198,7 +206,7 @@ ListenStream=/run/dentalcare.sock
 WantedBy=sockets.target
 ```
 
-### 8.2 Servicio
+### 9.2 Servicio
 
 ```bash
 sudo nano /etc/systemd/system/dentalcare.service
@@ -228,10 +236,7 @@ RestartSec=5s
 WantedBy=multi-user.target
 ```
 
-> Se usan **2 workers** en lugar de 3 para no saturar la RAM si el VPS tiene poca memoria.
-> Con 4 GB RAM puedes subir a 3 workers sin problema.
-
-### 8.3 Activar
+### 9.3 Activar
 
 ```bash
 sudo systemctl daemon-reload
@@ -241,18 +246,18 @@ sudo systemctl enable dentalcare
 sudo systemctl start  dentalcare
 ```
 
-Verificar que el nuevo socket existe **y** que el socket del proyecto 1 sigue ahí:
+Verificar que ambos sockets existen:
 
 ```bash
 ls /run/*.sock
-# Debe mostrar los dos: tienda.sock y dentalcare.sock
+# tienda.sock  dentalcare.sock
 ```
 
 ---
 
-## Paso 9 — Bloque Nginx para AdmiDent
+## Paso 10 — Bloque Nginx para AdmiDent en puerto 8080
 
-Se agrega un **nuevo archivo** en `sites-available`. El archivo del proyecto existente no se modifica.
+Se agrega un **archivo nuevo**. El bloque de la tienda en puerto 80 no se toca.
 
 ```bash
 sudo nano /etc/nginx/sites-available/dentalcare
@@ -260,8 +265,8 @@ sudo nano /etc/nginx/sites-available/dentalcare
 
 ```nginx
 server {
-    listen 80;
-    server_name dental.tudominio.com www.dental.tudominio.com;
+    listen 8080;
+    server_name 66.70.189.161;
 
     client_max_body_size 20M;
 
@@ -287,77 +292,63 @@ server {
 }
 ```
 
-Habilitar **solo** este nuevo bloque:
+Habilitar solo este nuevo bloque:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/dentalcare /etc/nginx/sites-enabled/
 ```
 
-Verificar que la configuración es válida antes de recargar:
+Verificar la configuración **antes** de recargar:
 
 ```bash
 sudo nginx -t
+# nginx: configuration file /etc/nginx/nginx.conf test is successful
 ```
 
-Si dice `syntax is ok` y `test is successful`:
+Recargar Nginx sin cortar conexiones de la tienda:
 
 ```bash
 sudo systemctl reload nginx
 ```
 
-> `reload` recarga la configuración **sin cortar conexiones activas** del proyecto existente.
-> Es diferente a `restart`.
-
 ---
 
-## Paso 10 — SSL para AdmiDent
-
-El certificado del proyecto existente **no se toca**. Certbot agrega uno nuevo para el dominio de AdmiDent:
+## Paso 11 — Permisos de acceso para Nginx
 
 ```bash
-sudo certbot --nginx -d dental.tudominio.com -d www.dental.tudominio.com
-```
-
-Certbot detecta que ya tiene certificados para el otro proyecto y solo agrega el nuevo.
-
-Verificar que ambos certificados están activos:
-
-```bash
-sudo certbot certificates
+sudo chmod 710 /home/dentalcare
+sudo chmod -R 755 /home/dentalcare/app/staticfiles
+sudo chmod -R 755 /home/dentalcare/app/media
 ```
 
 ---
 
-## Paso 11 — Verificación final
+## Paso 12 — Verificación final
 
-### Proyecto existente (tienda) — debe seguir funcionando exactamente igual
+### Tienda — debe seguir funcionando igual que antes
 
 ```bash
-sudo systemctl status tienda
-curl -I https://tienda.tudominio.com
+curl -I http://66.70.189.161/
+# HTTP/1.1 302 Found  (redirige a /login/)
 ```
 
-### Proyecto nuevo (dental) — debe responder
+### AdmiDent — debe responder en el puerto 8080
 
 ```bash
-sudo systemctl status dentalcare
-curl -I https://dental.tudominio.com
+curl -I http://66.70.189.161:8080/
+# HTTP/1.1 302 Found  (redirige a /login/)
 ```
 
-### Estado global
+Abrir en el navegador:
+- **Tienda:** `http://66.70.189.161/`
+- **AdmiDent:** `http://66.70.189.161:8080/`
+
+Estado global de todos los servicios:
 
 ```bash
-# Todos los servicios activos
-sudo systemctl status tienda dentalcare nginx postgresql
-
-# Sockets presentes
+sudo systemctl status nginx postgresql
+sudo journalctl -u dentalcare -n 30
 ls -la /run/*.sock
-
-# Logs de AdmiDent
-sudo journalctl -u dentalcare -n 50
-
-# Logs de la tienda (sin cambios)
-sudo journalctl -u tienda -n 10
 ```
 
 ---
@@ -366,21 +357,21 @@ sudo journalctl -u tienda -n 10
 
 | Componente | Tienda (proyecto 1) | AdmiDent (proyecto 2) |
 |---|---|---|
-| Usuario del sistema | `tienda` | `dentalcare` |
-| Directorio | `/home/tienda/app/` | `/home/dentalcare/app/` |
-| Entorno virtual | `/home/tienda/app/venv/` | `/home/dentalcare/app/venv/` |
-| Archivo `.env` | `/home/tienda/.env` | `/home/dentalcare/.env` |
+| URL de acceso | `http://66.70.189.161/` | `http://66.70.189.161:8080/` |
+| Puerto Nginx | `80` | `8080` |
+| Usuario del sistema | (el que ya tienes) | `dentalcare` |
+| Entorno virtual | su propio `venv/` | `/home/dentalcare/app/venv/` |
+| Archivo `.env` | su propio `.env` | `/home/dentalcare/.env` |
 | BD PostgreSQL | `tienda_db` | `dentalcare_db` |
 | Usuario PostgreSQL | `tienda_user` | `dentalcare_user` |
 | Socket Gunicorn | `/run/tienda.sock` | `/run/dentalcare.sock` |
 | Servicio systemd | `tienda.service` | `dentalcare.service` |
 | Bloque Nginx | `sites-available/tienda` | `sites-available/dentalcare` |
-| Dominio | `tienda.tudominio.com` | `dental.tudominio.com` |
-| Certificado SSL | Propio | Propio |
+| SSL | No aplica (sin dominio) | No aplica (sin dominio) |
 
 ---
 
-## Comandos de mantenimiento para AdmiDent (sin afectar la tienda)
+## Comandos de mantenimiento para AdmiDent
 
 ```bash
 # Actualizar código
@@ -389,18 +380,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
-sudo systemctl restart dentalcare      # solo reinicia AdmiDent
+sudo systemctl restart dentalcare      # solo reinicia AdmiDent, no toca la tienda
 
 # Ver logs en tiempo real
 sudo journalctl -u dentalcare -f
 
-# Reiniciar solo AdmiDent si hay problemas
-sudo systemctl restart dentalcare
-
-# Recargar Nginx (aplica para ambos proyectos, sin cortar conexiones)
-sudo systemctl reload nginx
-
-# Backup solo de la BD de AdmiDent
+# Backup de la BD de AdmiDent
 sudo -u postgres pg_dump dentalcare_db > ~/backup_dental_$(date +%Y%m%d).sql
 ```
 
@@ -408,32 +393,39 @@ sudo -u postgres pg_dump dentalcare_db > ~/backup_dental_$(date +%Y%m%d).sql
 
 ## Problemas comunes
 
+### `curl http://66.70.189.161:8080/` no responde (connection refused)
+El puerto no está abierto o Nginx no escucha en él:
+```bash
+sudo ufw allow 8080/tcp
+sudo ufw status
+sudo nginx -t && sudo systemctl reload nginx
+```
+
 ### Nginx devuelve 502 Bad Gateway
-El socket de Gunicorn no está corriendo:
+Gunicorn no está corriendo:
 ```bash
 sudo systemctl status dentalcare
 sudo systemctl restart dentalcare
+sudo journalctl -u dentalcare -n 20
 ```
 
-### Nginx devuelve 403 Forbidden en /static/ o /media/
-Nginx no tiene permiso para leer los archivos:
+### Nginx devuelve 403 en /static/ o /media/
 ```bash
 sudo chmod 710 /home/dentalcare
 sudo chmod -R 755 /home/dentalcare/app/staticfiles
 sudo chmod -R 755 /home/dentalcare/app/media
 ```
 
-### Error de base de datos al iniciar
-Verificar que la BD existe y las credenciales en `.env` son correctas:
+### Error `DisallowedHost` en los logs
+La IP no está en `ALLOWED_HOSTS` del `.env`:
 ```bash
-sudo -u postgres psql -c "\l"
-source /home/dentalcare/app/venv/bin/activate
-cd /home/dentalcare/app
-python manage.py dbshell    # debe abrir psql sin error
+nano /home/dentalcare/.env
+# ALLOWED_HOSTS=66.70.189.161
+sudo systemctl restart dentalcare
 ```
 
-### El proyecto 1 dejó de funcionar después de recargar Nginx
-Verificar que su bloque Nginx sigue habilitado:
+### La tienda dejó de funcionar
+Verificar que su bloque Nginx sigue habilitado y que `nginx -t` no reporta errores:
 ```bash
 ls /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -442,4 +434,4 @@ sudo systemctl reload nginx
 
 ---
 
-*La regla de oro: cada proyecto es una isla — usuario, entorno, BD, socket y dominio propios.*
+*La regla de oro: cada proyecto es una isla — usuario, entorno, BD, socket y puerto propios.*

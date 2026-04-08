@@ -17,10 +17,23 @@ if not User.objects.filter(username='admin').exists():
     admin.first_name = 'Administrador'
     admin.last_name = 'Sistema'
     admin.save()
-    PerfilUsuario.objects.get_or_create(user=admin, defaults={'rol': 'admin'})
     print("✓ Usuario admin creado (admin / admin123)")
 else:
+    admin = User.objects.get(username='admin')
     print("  Usuario admin ya existe")
+PerfilUsuario.objects.update_or_create(user=admin, defaults={'rol': 'admin'})
+
+# ── Superusuario administrador2 ───────────────────────
+if not User.objects.filter(username='administrador2').exists():
+    admin2 = User.objects.create_superuser('administrador2', 'administrador2@dental.bo', 'admin123')
+    admin2.first_name = 'Administrador'
+    admin2.last_name = 'Dos'
+    admin2.save()
+    print("✓ Usuario administrador2 creado (administrador2 / admin123)")
+else:
+    admin2 = User.objects.get(username='administrador2')
+    print("  Usuario administrador2 ya existe")
+PerfilUsuario.objects.update_or_create(user=admin2, defaults={'rol': 'admin'})
 
 # ── Doctor de ejemplo ─────────────────────────────────
 if not User.objects.filter(username='doctor1').exists():
@@ -137,5 +150,6 @@ print(f"✓ {len(insumos_lista)} insumos creados")
 print("\n=== Setup completado ===")
 print("Acceso: http://127.0.0.1:8000/")
 print("Admin:  http://127.0.0.1:8000/admin/")
-print("Usuario admin: admin / admin123")
-print("Usuario doctor: doctor1 / doctor123")
+print("Usuario admin:          admin          / admin123")
+print("Usuario administrador2: administrador2 / admin123")
+print("Usuario doctor:         doctor1        / doctor123")
