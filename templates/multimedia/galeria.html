@@ -142,39 +142,40 @@
   transform: translateX(-50%);
 }
 
-/* ══ Drop zone ════════════════════════════════════════ */
-.drop-zone {
-  border: 2px dashed var(--border);
-  border-radius: 12px; padding: 1.5rem 1rem;
-  text-align: center; cursor: pointer;
-  transition: all .2s; background: var(--bg-base);
-  position: relative; overflow: hidden;
-}
-.drop-zone.drag-over {
+/* ══ File picker label ════════════════════════════════ */
+#filePickerLabel:hover {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--bg-base));
-}
-.drop-zone input[type="file"] {
-  position: absolute; inset: 0; opacity: 0;
-  cursor: pointer; width: 100%; height: 100%;
-}
-.dz-preview {
-  display: none; margin-top: .75rem;
-  border-radius: 10px; overflow: hidden;
-  border: 1.5px solid var(--border-light);
-}
-.dz-preview img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
-.dz-file-info {
-  font-size: .72rem; color: var(--text-2); padding: .35rem .6rem;
-  background: var(--bg-surface); display: flex; align-items: center; gap: .4rem;
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-base));
 }
 
 /* ══ Lightbox modal ══════════════════════════════════ */
 .modal-lb .modal-content {
   background: #0a0c12; border: 1px solid rgba(255,255,255,.08);
 }
-.modal-lb .modal-body { padding: 0; }
-.lb-img { width: 100%; max-height: 75vh; object-fit: contain; display: block; }
+.modal-lb .modal-body { padding: 0; overflow: hidden; }
+.lb-viewport {
+  width: 100%; max-height: 75vh; min-height: 220px;
+  overflow: hidden; display: flex; align-items: center;
+  justify-content: center; background: #0a0c12;
+  cursor: grab; position: relative; touch-action: none;
+}
+.lb-viewport.grabbing { cursor: grabbing; }
+.lb-img {
+  max-width: 100%; max-height: 75vh;
+  object-fit: contain; display: block;
+  transform-origin: center center;
+  will-change: transform;
+  pointer-events: none; user-select: none;
+  -webkit-user-drag: none;
+}
+.lb-zoom-badge {
+  position: absolute; bottom: .5rem; right: .6rem;
+  font-size: .62rem; font-weight: 700; padding: .18em .5em;
+  border-radius: 6px; background: rgba(0,0,0,.55);
+  color: rgba(255,255,255,.7); pointer-events: none;
+  opacity: 0; transition: opacity .25s;
+}
+.lb-zoom-badge.visible { opacity: 1; }
 
 /* ══ Section heading ═════════════════════════════════ */
 .sec-head { display: flex; align-items: center; justify-content: space-between;
@@ -317,9 +318,21 @@
               overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           {{ c.titulo }}
         </div>
-        <span style="font-size:.62rem;color:var(--text-3);flex-shrink:0">
+        <span style="font-size:.62rem;color:var(--text-3);flex-shrink:0;margin-right:.4rem">
           {{ c.fecha|date:"d/m/Y" }}
         </span>
+        <form method="post" action="{% url 'multimedia:eliminar_comparacion' c.pk %}"
+              style="flex-shrink:0"
+              onsubmit="return confirm('¿Eliminar esta comparación?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm p-0"
+                  style="width:22px;height:22px;display:flex;align-items:center;
+                         justify-content:center;color:#f87171;border:none;
+                         background:transparent;border-radius:5px"
+                  title="Eliminar comparación">
+            <i class="fa-solid fa-trash-can fa-xs"></i>
+          </button>
+        </form>
       </div>
 
       <div class="comp-imgs" style="position:relative">
@@ -410,7 +423,23 @@
          data-dr="{{ foto.subido_por.get_full_name|default:foto.subido_por.username|default:'' }}">
       <img src="{{ foto.imagen.url }}" class="foto-thumb" alt="{{ foto.titulo }}" loading="lazy">
       <div class="foto-info">
-        <div class="foto-titulo">{{ foto.titulo }}</div>
+        <div class="d-flex align-items-start justify-content-between gap-1">
+          <div class="foto-titulo flex-grow-1">{{ foto.titulo }}</div>
+          <form method="post" action="{% url 'multimedia:eliminar_foto' foto.pk %}"
+                style="flex-shrink:0"
+                onclick="event.stopPropagation()"
+                onsubmit="return confirm('¿Eliminar esta foto?')">
+            {% csrf_token %}
+            <button type="submit"
+                    class="btn btn-sm p-0"
+                    style="width:18px;height:18px;display:flex;align-items:center;
+                           justify-content:center;color:var(--text-3);border:none;
+                           background:transparent"
+                    title="Eliminar">
+              <i class="fa-solid fa-xmark fa-xs"></i>
+            </button>
+          </form>
+        </div>
         <div class="foto-meta">
           {% if foto.tipo == 'antes' %}
           <span class="tipo-badge" style="background:rgba(245,158,11,.15);color:#f59e0b">
@@ -500,30 +529,36 @@
         {% csrf_token %}
         <div class="modal-body">
 
-          <!-- Drop zone -->
-          <div class="drop-zone mb-3" id="dropZone">
-            <input type="file" name="imagen" id="id_imagen" accept="image/*" required>
-            <i class="fa-solid fa-cloud-arrow-up fa-2x mb-2" style="color:var(--accent);opacity:.6"></i>
-            <div style="font-weight:600;font-size:.88rem;margin-bottom:.25rem">
-              Arrastra una imagen aquí
+          <!-- Selector de imagen -->
+          <label id="filePickerLabel" style="
+            display:flex; align-items:center; gap:.75rem;
+            border:1.5px dashed var(--border); border-radius:12px;
+            padding:.85rem 1rem; cursor:pointer; margin-bottom:.9rem;
+            background:var(--bg-base); transition:border-color .15s, background .15s;">
+            <input type="file" name="imagen" id="id_imagen" accept="image/*" required
+                   style="display:none">
+            <div id="fileIconWrap" style="
+              width:40px; height:40px; border-radius:10px; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center;
+              background:var(--bg-surface); border:1.5px solid var(--border-light);
+              transition:all .15s;">
+              <i id="fileIcon" class="fa-solid fa-image" style="color:var(--text-3);font-size:1rem"></i>
             </div>
-            <div style="font-size:.75rem;color:var(--text-3)">
-              o <span style="color:var(--accent);font-weight:600">haz clic para seleccionar</span>
+            <div style="flex:1;min-width:0">
+              <div id="fileStatusText" style="font-weight:600;font-size:.85rem;color:var(--text-2)">
+                Seleccionar imagen
+              </div>
+              <div id="fileStatusSub" style="font-size:.7rem;color:var(--text-3);margin-top:.1rem">
+                JPG, PNG, WEBP · se comprime a JPEG automáticamente
+              </div>
             </div>
-            <div style="font-size:.65rem;color:var(--text-3);margin-top:.4rem">
-              JPG, PNG, WEBP — se convierte a JPEG automáticamente
+            <div id="fileStatusBadge" style="
+              display:none; flex-shrink:0;
+              font-size:.65rem; font-weight:700; padding:.22em .6em;
+              border-radius:8px; background:rgba(45,184,122,.15); color:var(--accent);">
+              <i class="fa-solid fa-circle-check fa-xs me-1"></i>Lista
             </div>
-          </div>
-
-          <!-- Preview -->
-          <div class="dz-preview" id="dzPreview">
-            <img id="dzPreviewImg" src="" alt="Preview">
-            <div class="dz-file-info">
-              <i class="fa-solid fa-file-image fa-xs" style="color:var(--accent)"></i>
-              <span id="dzFileName">—</span>
-              <span id="dzFileSize" style="margin-left:auto;color:var(--text-3)"></span>
-            </div>
-          </div>
+          </label>
 
           <!-- Campos del formulario -->
           <div class="row g-2 mt-1">
@@ -553,7 +588,11 @@
             {{ form.descripcion }}
           </div>
 
-          {% if form.errors and not form.titulo.errors %}
+          {% if form.imagen.errors %}
+          <div class="alert alert-danger py-2 mt-2" style="font-size:.8rem">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.imagen.errors.0 }}
+          </div>
+          {% elif form.errors and not form.titulo.errors %}
           <div class="alert alert-danger py-2 mt-2" style="font-size:.8rem">
             <i class="fa-solid fa-circle-exclamation me-1"></i>Revisa los campos requeridos.
           </div>
@@ -662,20 +701,42 @@
         <button class="btn-close btn-close-white ms-2" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
-        <img id="lbImg" src="" class="lb-img" alt="">
+        <div class="lb-viewport" id="lbViewport">
+          <img id="lbImg" src="" class="lb-img" alt="">
+          <div class="lb-zoom-badge" id="lbZoomBadge">100%</div>
+        </div>
       </div>
-      {% if fotos %}
       <div class="modal-footer" style="background:#0e111a;border-color:rgba(255,255,255,.07);
-                                        padding:.5rem .75rem;justify-content:center;gap:.3rem">
+                                        padding:.5rem .75rem;display:flex;align-items:center;gap:.3rem">
+        {% if fotos %}
         <button id="lbPrev" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
           <i class="fa-solid fa-chevron-left me-1"></i>Anterior
         </button>
-        <span id="lbCounter" style="font-size:.72rem;color:#64748b;padding:0 .5rem"></span>
+        <span id="lbCounter" style="font-size:.72rem;color:#64748b;padding:0 .4rem;flex:1;text-align:center"></span>
         <button id="lbNext" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
           Siguiente<i class="fa-solid fa-chevron-right ms-1"></i>
         </button>
+        {% else %}
+        <span style="flex:1"></span>
+        {% endif %}
+        <!-- Controles de zoom -->
+        <div style="display:flex;gap:.25rem;margin-left:.5rem">
+          <button id="lbZoomOut" class="btn btn-sm btn-outline-secondary"
+                  style="font-size:.75rem;width:30px;height:30px;padding:0;display:flex;
+                         align-items:center;justify-content:center" title="Alejar">
+            <i class="fa-solid fa-minus fa-xs"></i>
+          </button>
+          <button id="lbZoomReset" class="btn btn-sm btn-outline-secondary"
+                  style="font-size:.65rem;padding:0 .45rem;height:30px" title="Restablecer zoom">
+            <i class="fa-solid fa-expand fa-xs"></i>
+          </button>
+          <button id="lbZoomIn" class="btn btn-sm btn-outline-secondary"
+                  style="font-size:.75rem;width:30px;height:30px;padding:0;display:flex;
+                         align-items:center;justify-content:center" title="Acercar">
+            <i class="fa-solid fa-plus fa-xs"></i>
+          </button>
+        </div>
       </div>
-      {% endif %}
     </div>
   </div>
 </div>
@@ -721,63 +782,224 @@ document.querySelectorAll('.tipo-chip').forEach(chip => {
   });
 });
 
-/* ── Drop zone ───────────────────────────────────── */
-const dropZone   = document.getElementById('dropZone');
-const fileInput  = document.getElementById('id_imagen');
-const dzPreview  = document.getElementById('dzPreview');
-const dzImg      = document.getElementById('dzPreviewImg');
-const dzFileName = document.getElementById('dzFileName');
-const dzFileSize = document.getElementById('dzFileSize');
+/* ── Selector de imagen ──────────────────────────── */
+const fileInput      = document.getElementById('id_imagen');
+const fileLabel      = document.getElementById('filePickerLabel');
+const fileIconWrap   = document.getElementById('fileIconWrap');
+const fileIcon       = document.getElementById('fileIcon');
+const fileStatusText = document.getElementById('fileStatusText');
+const fileStatusSub  = document.getElementById('fileStatusSub');
+const fileStatusBadge= document.getElementById('fileStatusBadge');
 
-['dragenter','dragover'].forEach(evt =>
-  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
-);
-['dragleave','dragend'].forEach(evt =>
-  dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'))
-);
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    // Asignar al input
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
-    showPreview(file);
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) {
+    const size = file.size > 1024*1024
+      ? (file.size/(1024*1024)).toFixed(1) + ' MB'
+      : Math.round(file.size/1024) + ' KB';
+    fileStatusText.textContent = file.name;
+    fileStatusSub.textContent  = size;
+    fileIcon.className = 'fa-solid fa-circle-check';
+    fileIcon.style.color = 'var(--accent)';
+    fileIconWrap.style.borderColor = 'var(--accent)';
+    fileIconWrap.style.background  = 'rgba(45,184,122,.1)';
+    fileLabel.style.borderColor    = 'var(--accent)';
+    fileLabel.style.background     = 'color-mix(in srgb, var(--accent) 4%, var(--bg-base))';
+    fileStatusBadge.style.display  = 'flex';
   }
 });
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) showPreview(fileInput.files[0]);
-});
 
-function showPreview(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    dzImg.src = e.target.result;
-    dzPreview.style.display = '';
-    dzFileName.textContent = file.name;
-    dzFileSize.textContent = file.size > 1024*1024
-      ? (file.size / (1024*1024)).toFixed(1) + ' MB'
-      : Math.round(file.size / 1024) + ' KB';
-  };
-  reader.readAsDataURL(file);
-}
-
-/* Reset modal al cerrar */
+/* Reset al cerrar el modal */
 document.getElementById('modalSubir').addEventListener('hidden.bs.modal', () => {
-  dzPreview.style.display = 'none';
-  dzImg.src = '';
-  dropZone.classList.remove('drag-over');
+  fileInput.value            = '';
+  fileStatusText.textContent = 'Seleccionar imagen';
+  fileStatusSub.textContent  = 'JPG, PNG, WEBP · se comprime a JPEG automáticamente';
+  fileIcon.className         = 'fa-solid fa-image';
+  fileIcon.style.color       = 'var(--text-3)';
+  fileIconWrap.style.borderColor = '';
+  fileIconWrap.style.background  = '';
+  fileLabel.style.borderColor    = '';
+  fileLabel.style.background     = '';
+  fileStatusBadge.style.display  = 'none';
 });
 
-/* ── Lightbox ────────────────────────────────────── */
+/* ── Lightbox con zoom ───────────────────────────── */
 let lbIdx = 0;
 
+/* Estado de zoom */
+let lbScale = 1, lbTx = 0, lbTy = 0;
+const MIN_SCALE = 1, MAX_SCALE = 5;
+
+const lbImg       = document.getElementById('lbImg');
+const lbViewport  = document.getElementById('lbViewport');
+const lbZoomBadge = document.getElementById('lbZoomBadge');
+let badgeTimer    = null;
+
+function applyTransform(animate) {
+  lbImg.style.transition = animate ? 'transform .18s ease' : 'none';
+  lbImg.style.transform  = `translate(${lbTx}px, ${lbTy}px) scale(${lbScale})`;
+}
+
+function clampPan() {
+  if (!lbImg.parentElement) return;
+  const vw = lbViewport.offsetWidth;
+  const vh = lbViewport.offsetHeight;
+  const iw = lbImg.offsetWidth  * lbScale;
+  const ih = lbImg.offsetHeight * lbScale;
+  const maxTx = Math.max(0, (iw - vw) / 2);
+  const maxTy = Math.max(0, (ih - vh) / 2);
+  lbTx = Math.min(maxTx, Math.max(-maxTx, lbTx));
+  lbTy = Math.min(maxTy, Math.max(-maxTy, lbTy));
+}
+
+function showBadge() {
+  lbZoomBadge.textContent = Math.round(lbScale * 100) + '%';
+  lbZoomBadge.classList.add('visible');
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => lbZoomBadge.classList.remove('visible'), 1200);
+}
+
+function zoomTo(newScale, cx, cy, animate) {
+  /* cx, cy: punto focal en coordenadas del viewport */
+  newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+  const ratio = newScale / lbScale;
+  const vw = lbViewport.offsetWidth / 2;
+  const vh = lbViewport.offsetHeight / 2;
+  lbTx = cx - vw + (lbTx + vw - cx) * ratio;
+  lbTy = cy - vh + (lbTy + vh - cy) * ratio;
+  lbScale = newScale;
+  clampPan();
+  applyTransform(animate ?? true);
+  showBadge();
+  lbViewport.classList.toggle('grabbing', false);
+}
+
+function resetZoom(animate) {
+  lbScale = 1; lbTx = 0; lbTy = 0;
+  applyTransform(animate ?? true);
+  lbZoomBadge.classList.remove('visible');
+}
+
+/* ── Botones de zoom ── */
+document.getElementById('lbZoomIn')   ?.addEventListener('click', () => zoomTo(lbScale * 1.4, 0, 0));
+document.getElementById('lbZoomOut')  ?.addEventListener('click', () => zoomTo(lbScale / 1.4, 0, 0));
+document.getElementById('lbZoomReset')?.addEventListener('click', () => resetZoom(true));
+
+/* ── Rueda del ratón (escritorio) ── */
+lbViewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = lbViewport.getBoundingClientRect();
+  const cx   = e.clientX - rect.left - rect.width  / 2;
+  const cy   = e.clientY - rect.top  - rect.height / 2;
+  const factor = e.deltaY < 0 ? 1.25 : 0.8;
+  zoomTo(lbScale * factor, cx, cy, false);
+}, { passive: false });
+
+/* ── Doble clic / doble toque ── */
+let lastTap = 0;
+lbViewport.addEventListener('dblclick', e => {
+  const rect = lbViewport.getBoundingClientRect();
+  const cx   = e.clientX - rect.left - rect.width  / 2;
+  const cy   = e.clientY - rect.top  - rect.height / 2;
+  lbScale > 1.05 ? resetZoom(true) : zoomTo(2.5, cx, cy, true);
+});
+lbViewport.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTap < 280) {
+    const t    = e.changedTouches[0];
+    const rect = lbViewport.getBoundingClientRect();
+    const cx   = t.clientX - rect.left - rect.width  / 2;
+    const cy   = t.clientY - rect.top  - rect.height / 2;
+    lbScale > 1.05 ? resetZoom(true) : zoomTo(2.5, cx, cy, true);
+    e.preventDefault();
+  }
+  lastTap = now;
+}, { passive: false });
+
+/* ── Arrastre con ratón (pan) ── */
+let dragStart = null;
+lbViewport.addEventListener('mousedown', e => {
+  if (lbScale <= 1) return;
+  dragStart = { x: e.clientX - lbTx, y: e.clientY - lbTy };
+  lbViewport.classList.add('grabbing');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragStart) return;
+  lbTx = e.clientX - dragStart.x;
+  lbTy = e.clientY - dragStart.y;
+  clampPan();
+  applyTransform(false);
+});
+window.addEventListener('mouseup', () => {
+  dragStart = null;
+  lbViewport.classList.remove('grabbing');
+});
+
+/* ── Pinch-to-zoom + pan táctil ── */
+let touch0 = null, touch1 = null, pinchDist0 = 0, pinchScale0 = 1;
+let panStart = null;
+
+function dist(a, b) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+function midpoint(a, b, rect) {
+  return {
+    x: (a.clientX + b.clientX) / 2 - rect.left - rect.width  / 2,
+    y: (a.clientY + b.clientY) / 2 - rect.top  - rect.height / 2,
+  };
+}
+
+lbViewport.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    touch0   = e.touches[0];
+    touch1   = null;
+    panStart = { x: e.touches[0].clientX - lbTx, y: e.touches[0].clientY - lbTy };
+  } else if (e.touches.length === 2) {
+    touch0     = e.touches[0];
+    touch1     = e.touches[1];
+    panStart   = null;
+    pinchDist0 = dist(touch0, touch1);
+    pinchScale0= lbScale;
+  }
+  e.preventDefault();
+}, { passive: false });
+
+lbViewport.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    /* Pinch */
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const d  = dist(t0, t1);
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchScale0 * (d / pinchDist0)));
+    const rect = lbViewport.getBoundingClientRect();
+    const mid  = midpoint(t0, t1, rect);
+    const ratio = newScale / lbScale;
+    lbTx = mid.x + (lbTx - mid.x) * ratio;
+    lbTy = mid.y + (lbTy - mid.y) * ratio;
+    lbScale = newScale;
+    clampPan();
+    applyTransform(false);
+    showBadge();
+  } else if (e.touches.length === 1 && panStart && lbScale > 1) {
+    /* Pan */
+    lbTx = e.touches[0].clientX - panStart.x;
+    lbTy = e.touches[0].clientY - panStart.y;
+    clampPan();
+    applyTransform(false);
+  }
+}, { passive: false });
+
+lbViewport.addEventListener('touchend', e => {
+  if (e.touches.length < 2) { touch1 = null; }
+  if (e.touches.length === 0) { panStart = null; }
+}, { passive: true });
+
+/* ── Navegación entre fotos ── */
 function openLightbox(idx) {
   lbIdx = idx;
+  resetZoom(false);
   const f = FOTOS[idx];
-  document.getElementById('lbImg').src = f.src;
+  lbImg.src = f.src;
   document.getElementById('lbDescargar').href = f.src;
   document.getElementById('lbTitulo').textContent = f.titulo;
   let meta = f.tipo + ' · ' + f.fecha;
@@ -797,11 +1019,33 @@ const lbNext = document.getElementById('lbNext');
 if (lbPrev) lbPrev.addEventListener('click', () => openLightbox((lbIdx - 1 + FOTOS.length) % FOTOS.length));
 if (lbNext) lbNext.addEventListener('click', () => openLightbox((lbIdx + 1) % FOTOS.length));
 
-/* Navegación con teclado */
+/* Swipe horizontal para navegar (solo cuando no hay zoom) */
+let swipeX0 = null;
+lbViewport.addEventListener('touchstart', e => {
+  if (e.touches.length === 1 && lbScale <= 1.05) swipeX0 = e.touches[0].clientX;
+}, { passive: true });
+lbViewport.addEventListener('touchend', e => {
+  if (swipeX0 === null || lbScale > 1.05 || FOTOS.length < 2) { swipeX0 = null; return; }
+  const dx = e.changedTouches[0].clientX - swipeX0;
+  swipeX0 = null;
+  if (Math.abs(dx) > 50) {
+    dx < 0
+      ? openLightbox((lbIdx + 1) % FOTOS.length)
+      : openLightbox((lbIdx - 1 + FOTOS.length) % FOTOS.length);
+  }
+}, { passive: true });
+
+/* Teclado */
 document.getElementById('modalLightbox')?.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft')  openLightbox((lbIdx - 1 + FOTOS.length) % FOTOS.length);
   if (e.key === 'ArrowRight') openLightbox((lbIdx + 1) % FOTOS.length);
+  if (e.key === '+' || e.key === '=') zoomTo(lbScale * 1.3, 0, 0);
+  if (e.key === '-')                   zoomTo(lbScale / 1.3, 0, 0);
+  if (e.key === '0')                   resetZoom(true);
 });
+
+/* Reset zoom al cerrar */
+document.getElementById('modalLightbox').addEventListener('hidden.bs.modal', () => resetZoom(false));
 
 /* ── Abrir modal con errores ─────────────────────── */
 {% if form.errors %}

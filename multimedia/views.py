@@ -21,12 +21,14 @@ def _compress_image(image_field, max_px=1600, quality=82):
         buf = io.BytesIO()
         img.save(buf, format='JPEG', quality=quality, optimize=True)
         buf.seek(0)
-        # Cambiar extensión a .jpg
-        name = image_field.name.rsplit('.', 1)[0] + '.jpg'
+        # Usar solo el nombre de archivo base (sin ruta) para evitar que
+        # Django duplique el path al anteponer upload_to al guardar
+        basename = image_field.name.rsplit('/', 1)[-1]
+        name = basename.rsplit('.', 1)[0] + '.jpg'
         return ContentFile(buf.read(), name=name)
     except Exception:
         # Si falla la compresión, usar la imagen original sin cambios
-        return image_field
+        return None
 
 
 @login_required
@@ -41,7 +43,17 @@ def galeria_paciente(request, paciente_pk):
             foto = form.save(commit=False)
             foto.paciente = paciente
             foto.subido_por = request.user
-            foto.imagen = _compress_image(foto.imagen)
+            # Nota: Django ya guarda el archivo original en disco durante is_valid()
+            # (_post_clean → save_form_data). Hay que eliminar ese original y
+            # reemplazarlo con la versión comprimida.
+            original = foto.imagen  # ImageFieldFile ya guardado en disco
+            compressed = _compress_image(original)
+            if compressed is not None:
+                try:
+                    original.delete(save=False)   # borra el archivo original del disco
+                except Exception:
+                    pass
+                foto.imagen = compressed          # ContentFile con nombre corto
             foto.save()
             messages.success(request, 'Imagen subida y optimizada correctamente.')
             return redirect('multimedia:galeria', paciente_pk=paciente_pk)
@@ -68,5 +80,28 @@ def crear_comparacion(request, paciente_pk):
             comp = form.save(commit=False)
             comp.paciente = paciente
             comp.save()
-            messages.success(request, 'Comparación creada.')
+            messages.success(request, 'Comparación creada correctamente.')
+        else:
+            messages.error(request, 'Error al crear la comparación. Verifica los campos.')
+    return redirect('multimedia:galeria', paciente_pk=paciente_pk)
+
+
+@login_required
+def eliminar_foto(request, foto_pk):
+    foto = get_object_or_404(FotoClinica, pk=foto_pk)
+    paciente_pk = foto.paciente_id
+    if request.method == 'POST':
+        foto.imagen.delete(save=False)
+        foto.delete()
+        messages.success(request, 'Foto eliminada.')
+    return redirect('multimedia:galeria', paciente_pk=paciente_pk)
+
+
+@login_required
+def eliminar_comparacion(request, comp_pk):
+    comp = get_object_or_404(ComparacionFotos, pk=comp_pk)
+    paciente_pk = comp.paciente_id
+    if request.method == 'POST':
+        comp.delete()
+        messages.success(request, 'Comparación eliminada.')
     return redirect('multimedia:galeria', paciente_pk=paciente_pk)
