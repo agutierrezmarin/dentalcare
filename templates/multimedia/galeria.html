@@ -323,7 +323,7 @@
         </span>
         <form method="post" action="{% url 'multimedia:eliminar_comparacion' c.pk %}"
               style="flex-shrink:0"
-              onsubmit="return confirm('¿Eliminar esta comparación?')">
+              onsubmit="confirmarAccion('¿Estás seguro de que quieres eliminar esta comparación?', this); return false;">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm p-0"
                   style="width:22px;height:22px;display:flex;align-items:center;
@@ -428,7 +428,7 @@
           <form method="post" action="{% url 'multimedia:eliminar_foto' foto.pk %}"
                 style="flex-shrink:0"
                 onclick="event.stopPropagation()"
-                onsubmit="return confirm('¿Eliminar esta foto?')">
+                onsubmit="confirmarAccion('¿Estás seguro de que quieres eliminar esta foto?', this); return false;">
             {% csrf_token %}
             <button type="submit"
                     class="btn btn-sm p-0"

@@ -235,7 +235,7 @@
         </a>
         {% endif %}
         <form method="post" action="{% url 'personal:desactivar' p.pk %}"
-              onsubmit="return confirm('¿{{ p.activo|yesno:"Desactivar,Activar" }} a {{ p.user.get_full_name|default:p.user.username }}?')">
+              onsubmit="confirmarAccion('¿Estás seguro de que quieres {{ p.activo|yesno:"desactivar,activar" }} a {{ p.user.get_full_name|default:p.user.username }}?', this); return false;">
           {% csrf_token %}
           <button type="submit"
                   class="btn btn-sm {% if p.activo %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
