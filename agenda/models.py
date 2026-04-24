@@ -74,6 +74,11 @@ class Cita(models.Model):
     class Meta:
         ordering = ['fecha', 'hora_inicio']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Guarda el estado original para detectar cambios en post_save
+        self._estado_original = self.estado
+
     def __str__(self):
         return f"{self.paciente} - {self.fecha} {self.hora_inicio}"
 
@@ -83,3 +88,35 @@ class Cita(models.Model):
         inicio = datetime.combine(date.today(), self.hora_inicio)
         fin = datetime.combine(date.today(), self.hora_fin)
         return int((fin - inicio).seconds / 60)
+
+
+class NotificacionAgenda(models.Model):
+    TIPO_CHOICES = [
+        ('nueva_cita',   'Nueva cita programada'),
+        ('confirmada',   'Cita confirmada'),
+        ('cancelada',    'Cita cancelada'),
+        ('no_asistio',   'Paciente no asistió'),
+        ('reagendada',   'Cita reagendada'),
+        ('recordatorio', 'Recordatorio de cita'),
+    ]
+
+    destinatario = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE,
+        related_name='notificaciones_agenda',
+    )
+    cita    = models.ForeignKey(
+        Cita, on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='notificaciones',
+    )
+    tipo    = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    titulo  = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    leida   = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+
+    def __str__(self):
+        return f"{self.destinatario} — {self.titulo}"

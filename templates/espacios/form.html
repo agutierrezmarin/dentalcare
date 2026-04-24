@@ -1,0 +1,219 @@
+{% extends "base/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'espacios:lista' %}" class="text-decoration-none text-secondary">Espacios</a>
+  {% if espacio %} / <a href="{% url 'espacios:detalle' espacio.pk %}" class="text-decoration-none text-secondary">{{ espacio.nombre }}</a>{% endif %}
+  / {{ titulo }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section-header {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .85rem 1.1rem;
+  border-bottom: 1.5px solid var(--border-light);
+  background: var(--green-pale);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.form-section-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; flex-shrink: 0;
+}
+.form-section-title { font-weight: 700; font-size: .92rem; color: var(--green-deep); }
+.form-section-sub   { font-size: .72rem; color: var(--text-3); }
+.input-icon-wrap { position: relative; }
+.input-icon-wrap .inp-ico {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: .88rem; pointer-events: none; z-index: 2;
+}
+.input-icon-wrap .form-control,
+.input-icon-wrap .form-select { padding-left: 2.4rem; }
+.form-actions {
+  position: sticky; bottom: 0; background: var(--bg-surface);
+  border-top: 1.5px solid var(--border-light); padding: .9rem 1.1rem;
+  display: flex; gap: .6rem; justify-content: flex-end;
+  z-index: 50; border-radius: 0 0 var(--radius) var(--radius); margin-top: .5rem;
+}
+@media (max-width: 576px) {
+  .form-actions { border-radius: 0; margin: 0 -.65rem; }
+  .form-actions .btn { flex: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div style="width:44px;height:44px;border-radius:12px;
+              background:linear-gradient(135deg,#06b6d4,#0891b2);
+              display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:1.3rem;flex-shrink:0;
+              box-shadow:0 4px 14px rgba(6,182,212,.3)">
+    <i class="fa-solid fa-{% if espacio %}pen-to-square{% else %}hospital{% endif %}"></i>
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">{{ titulo }}</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">
+      {% if espacio %}Modifica los datos del espacio clínico{% else %}Registra un nuevo espacio en la clínica{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-9 col-lg-7">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ── Sección identificación ── #}
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(6,182,212,.14);color:#06b6d4">
+            <i class="fa-solid fa-id-card"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Identificación</div>
+            <div class="form-section-sub">El código se genera automáticamente según el tipo</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            {% if espacio %}
+            <div class="col-12">
+              <div style="font-size:.75rem;color:var(--text-3);font-weight:600;margin-bottom:.3rem">
+                <i class="fa-solid fa-barcode fa-xs me-1" style="color:#06b6d4"></i>Código (auto-generado)
+              </div>
+              <code style="background:var(--bg-base);padding:.3rem .7rem;border-radius:8px;
+                           font-size:.88rem;color:var(--text-2);border:1px solid var(--border-light)">{{ espacio.codigo }}</code>
+            </div>
+            {% endif %}
+
+            <div class="col-12">
+              <label class="form-label"><i class="fa-solid fa-hospital fa-xs me-1" style="color:#06b6d4"></i>{{ form.nombre.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-hospital" style="color:#06b6d4"></i>
+                {{ form.nombre }}
+              </div>
+              {% if form.nombre.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.nombre.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label"><i class="fa-solid fa-layer-group fa-xs me-1" style="color:#8b5cf6"></i>{{ form.tipo.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-layer-group" style="color:#8b5cf6"></i>
+                {{ form.tipo }}
+              </div>
+              {% if form.tipo.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.tipo.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label"><i class="fa-solid fa-circle-dot fa-xs me-1" style="color:#f97316"></i>{{ form.estado.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-circle-dot" style="color:#f97316"></i>
+                {{ form.estado }}
+              </div>
+              {% if form.estado.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.estado.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label"><i class="fa-solid fa-align-left fa-xs me-1" style="color:var(--text-3)"></i>{{ form.descripcion.label }}</label>
+              {{ form.descripcion }}
+              {% if form.descripcion.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.descripcion.errors.0 }}</div>{% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# ── Sección ubicación y capacidad ── #}
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(249,115,22,.14);color:#f97316">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Ubicación y capacidad</div>
+            <div class="form-section-sub">Dónde está y cuántos pacientes puede recibir</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label"><i class="fa-solid fa-location-dot fa-xs me-1" style="color:#f97316"></i>{{ form.ubicacion.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-location-dot" style="color:#f97316"></i>
+                {{ form.ubicacion }}
+              </div>
+              {% if form.ubicacion.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.ubicacion.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-6 col-sm-3">
+              <label class="form-label"><i class="fa-solid fa-users fa-xs me-1" style="color:#22c55e"></i>{{ form.capacidad.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-users" style="color:#22c55e;font-size:.75rem"></i>
+                {{ form.capacidad }}
+              </div>
+              {% if form.capacidad.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.capacidad.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-6 col-sm-3">
+              <label class="form-label"><i class="fa-solid fa-palette fa-xs me-1" style="color:var(--text-3)"></i>{{ form.color.label }}</label>
+              {{ form.color }}
+              {% if form.color.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.color.errors.0 }}</div>{% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# ── Sección asignación y mantenimiento ── #}
+      <div class="card mb-3">
+        <div class="form-section-header">
+          <div class="form-section-icon" style="background:rgba(34,197,94,.14);color:#22c55e">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div>
+            <div class="form-section-title">Asignación y mantenimiento</div>
+            <div class="form-section-sub">Doctor responsable y fecha de próxima revisión</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label"><i class="fa-solid fa-user-doctor fa-xs me-1" style="color:var(--accent)"></i>{{ form.doctores.label }}</label>
+              <div style="border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;background:var(--bg-base);max-height:180px;overflow-y:auto">
+                {{ form.doctores }}
+              </div>
+              {% if form.doctores.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.doctores.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label"><i class="fa-solid fa-calendar-check fa-xs me-1" style="color:#d97706"></i>{{ form.proxima_revision.label }}</label>
+              <div class="input-icon-wrap">
+                <i class="inp-ico fa-solid fa-calendar-check" style="color:#d97706"></i>
+                {{ form.proxima_revision }}
+              </div>
+              {% if form.proxima_revision.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.proxima_revision.errors.0 }}</div>{% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{% if espacio %}{% url 'espacios:detalle' espacio.pk %}{% else %}{% url 'espacios:lista' %}{% endif %}"
+           class="btn btn-outline-secondary">
+          <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="fa-solid fa-floppy-disk me-1"></i>
+          {% if espacio %}Guardar cambios{% else %}Registrar espacio{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends "base/base.html" %}
+{% block title %}{{ espacio.nombre }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'espacios:lista' %}" class="text-decoration-none text-secondary">Espacios</a> / {{ espacio.nombre }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.estado-pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .85rem; border-radius: 20px;
+  font-size: .82rem; font-weight: 700;
+}
+.estado-disponible    { background: rgba(52,211,153,.15);  color: #059669; }
+.estado-ocupado       { background: rgba(96,165,250,.15);  color: #1d4ed8; }
+.estado-mantenimiento { background: rgba(251,191,36,.15);  color: #d97706; }
+.estado-inactivo      { background: rgba(156,163,175,.15); color: #6b7280; }
+.info-row {
+  display: flex; align-items: flex-start; gap: .6rem;
+  padding: .55rem 0; border-bottom: 1px solid var(--border-light);
+  font-size: .875rem;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-3); width: 160px; flex-shrink: 0; font-size: .8rem; }
+.mant-item {
+  padding: .85rem 1rem;
+  border-left: 3px solid var(--border-light);
+  background: var(--bg-base);
+  border-radius: 0 10px 10px 0;
+  margin-bottom: .6rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabecera ── #}
+<div class="d-flex align-items-start gap-3 mb-4 flex-wrap">
+  <div style="width:52px;height:52px;border-radius:14px;flex-shrink:0;
+              background:{{ espacio.color }}22;
+              display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+              border:2px solid {{ espacio.color }}44">
+    {% if espacio.tipo == 'sillon' %}🦷
+    {% elif espacio.tipo == 'rayos_x' %}☢️
+    {% elif espacio.tipo == 'esterilizacion' %}🧪
+    {% elif espacio.tipo == 'espera' %}🪑
+    {% elif espacio.tipo == 'cirugia' %}🔬
+    {% elif espacio.tipo == 'laboratorio' %}⚗️
+    {% elif espacio.tipo == 'bodega' %}📦
+    {% elif espacio.tipo == 'oficina' %}💼
+    {% else %}🏥{% endif %}
+  </div>
+  <div style="flex:1">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h4 class="fw-bold mb-0">{{ espacio.nombre }}</h4>
+      <code style="font-size:.75rem;background:var(--bg-base);padding:.2rem .5rem;
+                   border-radius:6px;color:var(--text-2)">{{ espacio.codigo }}</code>
+      <span class="estado-pill estado-{{ espacio.estado }}">
+        {% if espacio.estado == 'disponible' %}<i class="fa-solid fa-circle-check fa-2xs"></i>
+        {% elif espacio.estado == 'ocupado' %}<i class="fa-solid fa-user fa-2xs"></i>
+        {% elif espacio.estado == 'mantenimiento' %}<i class="fa-solid fa-wrench fa-2xs"></i>
+        {% else %}<i class="fa-solid fa-ban fa-2xs"></i>{% endif %}
+        {{ espacio.get_estado_display }}
+      </span>
+    </div>
+    <div style="font-size:.8rem;color:var(--text-3);margin-top:.25rem">
+      {{ espacio.get_tipo_display }}{% if espacio.ubicacion %} · {{ espacio.ubicacion }}{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'espacios:editar' espacio.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalEstadoDetalle">
+      <i class="fa-solid fa-arrows-rotate me-1"></i>Estado
+    </button>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  {# ── Columna izquierda: info + registrar mantenimiento ── #}
+  <div class="col-12 col-lg-5">
+
+    {# Info general #}
+    <div class="card mb-4">
+      <div class="card-body">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:.75rem;color:var(--text-2)">
+          <i class="fa-solid fa-circle-info me-2" style="color:#06b6d4"></i>Información general
+        </div>
+        <div class="info-row">
+          <span class="info-label">Doctores asignados</span>
+          <span>
+            {% with docs=espacio.doctores.all %}
+            {% if docs %}
+              <div style="display:flex;flex-direction:column;gap:.25rem">
+              {% for doc in docs %}
+                <div><i class="fa-solid fa-user-doctor me-1" style="color:var(--accent)"></i>{{ doc.get_full_name|default:doc.username }}</div>
+              {% endfor %}
+              </div>
+            {% else %}
+              <span style="color:var(--text-3)">Sin asignar</span>
+            {% endif %}
+            {% endwith %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Capacidad</span>
+          <span>{{ espacio.capacidad }} paciente{{ espacio.capacidad|pluralize }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Próxima revisión</span>
+          <span>
+            {% if espacio.proxima_revision %}
+              <span style="{% if espacio.revision_vencida %}color:#ef4444;font-weight:600
+                            {% elif espacio.revision_proxima %}color:#d97706;font-weight:600{% endif %}">
+                {{ espacio.proxima_revision }}
+                {% if espacio.revision_vencida %} <i class="fa-solid fa-circle-exclamation fa-xs"></i>
+                {% elif espacio.revision_proxima %} <i class="fa-solid fa-clock fa-xs"></i>{% endif %}
+              </span>
+            {% else %}
+              <span style="color:var(--text-3)">No programada</span>
+            {% endif %}
+          </span>
+        </div>
+        {% if espacio.descripcion %}
+        <div class="info-row" style="flex-direction:column;gap:.3rem">
+          <span class="info-label">Descripción</span>
+          <span style="font-size:.84rem;color:var(--text-1);line-height:1.55">{{ espacio.descripcion }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+          <span class="info-label">Color</span>
+          <span class="d-flex align-items-center gap-2">
+            <span style="width:20px;height:20px;border-radius:6px;background:{{ espacio.color }};
+                         border:1px solid var(--border-light)"></span>
+            <code style="font-size:.78rem">{{ espacio.color }}</code>
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Total mantenimientos</span>
+          <span>{{ mantenimientos|length }}</span>
+        </div>
+      </div>
+    </div>
+
+    {# Registrar nuevo mantenimiento #}
+    <div class="card">
+      <div class="card-body">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:.75rem;color:var(--text-2)">
+          <i class="fa-solid fa-wrench me-2" style="color:#d97706"></i>Registrar mantenimiento
+        </div>
+        <form method="post" action="{% url 'espacios:mantenimiento' espacio.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.82rem">Tipo</label>
+            {{ form_mant.tipo }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.82rem">Descripción del trabajo</label>
+            {{ form_mant.descripcion }}
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.82rem">Fecha</label>
+              {{ form_mant.fecha }}
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:.82rem">Costo</label>
+              {{ form_mant.costo }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.82rem">Realizado por</label>
+            {{ form_mant.realizado_por }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.82rem">Próxima revisión <span style="color:var(--text-3);font-size:.72rem">(opcional)</span></label>
+            {{ form_mant.proxima_revision }}
+          </div>
+          <button type="submit" class="btn btn-warning btn-sm w-100" style="color:#fff">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar mantenimiento
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Columna derecha: historial de mantenimientos ── #}
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:.85rem;color:var(--text-2)">
+          <i class="fa-solid fa-clock-rotate-left me-2" style="color:#8b5cf6"></i>Historial de mantenimientos
+        </div>
+
+        {% if mantenimientos %}
+        {% for m in mantenimientos %}
+        <div class="mant-item" style="border-left-color:
+          {% if m.tipo == 'correctivo' or m.tipo == 'reparacion' %}#ef4444
+          {% elif m.tipo == 'preventivo' %}#22c55e
+          {% elif m.tipo == 'limpieza' %}#06b6d4
+          {% else %}#8b5cf6{% endif %}">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-1 mb-1">
+            <span style="font-weight:600;font-size:.875rem">{{ m.get_tipo_display }}</span>
+            <span style="font-size:.75rem;color:var(--text-3)">
+              <i class="fa-solid fa-calendar fa-xs me-1"></i>{{ m.fecha }}
+            </span>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-1);margin-bottom:.4rem;line-height:1.5">
+            {{ m.descripcion }}
+          </div>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--text-2)">
+            {% if m.realizado_por %}
+            <span><i class="fa-solid fa-user-gear me-1"></i>{{ m.realizado_por }}</span>
+            {% endif %}
+            {% if m.costo %}
+            <span><i class="fa-solid fa-dollar-sign me-1"></i>{{ m.costo }}</span>
+            {% endif %}
+            {% if m.proxima_revision %}
+            <span><i class="fa-solid fa-calendar-check me-1"></i>Próx. revisión: {{ m.proxima_revision }}</span>
+            {% endif %}
+            {% if m.registrado_por %}
+            <span style="color:var(--text-3)">
+              <i class="fa-solid fa-user me-1"></i>Registrado por: {{ m.registrado_por.get_full_name|default:m.registrado_por.username }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4" style="color:var(--text-3)">
+          <i class="fa-solid fa-wrench fa-2x mb-3 d-block" style="opacity:.3"></i>
+          Sin registros de mantenimiento
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Modal cambiar estado ── #}
+<div class="modal fade" id="modalEstadoDetalle" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:14px">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h6 class="modal-title">Cambiar estado — {{ espacio.nombre }}</h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'espacios:estado' espacio.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <select name="estado" class="form-select">
+            {% for val, label in espacio.ESTADO_CHOICES %}
+            <option value="{{ val }}" {% if espacio.estado == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-check me-1"></i>Actualizar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

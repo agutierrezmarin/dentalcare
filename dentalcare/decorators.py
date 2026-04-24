@@ -16,3 +16,19 @@ def solo_admin(view_func):
             return redirect('dashboard')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def admin_o_recepcion(view_func):
+    """Permite acceso a usuarios con rol 'admin' o 'recepcion'."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        try:
+            rol = request.user.perfil.rol if request.user.is_authenticated else None
+            tiene_acceso = rol in ('admin', 'recepcion')
+        except Exception:
+            tiene_acceso = False
+        if not tiene_acceso:
+            messages.warning(request, 'No tienes permiso para acceder a esta sección.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper

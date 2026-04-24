@@ -41,6 +41,26 @@
         <hr style="border-color:var(--border);margin:.75rem 0">
         <div style="font-size:.82rem;color:var(--text-2)">
           <div><i class="bi bi-person-badge me-1"></i>{{ c.doctor.get_full_name|default:"Sin asignar" }}</div>
+
+          {# Espacio asignado al doctor #}
+          {% if c.espacio_asignado %}{% with esp=c.espacio_asignado %}
+          <div class="d-flex align-items-center gap-1 mt-1"
+               style="background:{{ esp.color }}15;border:1px solid {{ esp.color }}40;
+                      border-radius:8px;padding:.3rem .65rem;display:inline-flex;flex-wrap:wrap">
+            <i class="fa-solid fa-hospital fa-xs" style="color:{{ esp.color }}"></i>
+            <span style="font-weight:600;color:var(--text-1)">{{ esp.nombre }}</span>
+            <span style="font-size:.7rem;color:var(--text-3)">· {{ esp.codigo }}</span>
+            {% if esp.ubicacion %}<span style="font-size:.7rem;color:var(--text-3)">· {{ esp.ubicacion }}</span>{% endif %}
+            <span style="font-size:.65rem;font-weight:700;padding:.1rem .35rem;border-radius:10px;margin-left:.15rem;
+              {% if esp.estado == 'disponible' %}background:rgba(52,211,153,.15);color:#059669
+              {% elif esp.estado == 'ocupado' %}background:rgba(96,165,250,.15);color:#1d4ed8
+              {% elif esp.estado == 'mantenimiento' %}background:rgba(251,191,36,.15);color:#d97706
+              {% else %}background:rgba(156,163,175,.15);color:#6b7280{% endif %}">
+              {{ esp.get_estado_display }}
+            </span>
+          </div>
+          {% endwith %}{% endif %}
+
           {% if c.sillon %}<div><i class="bi bi-hospital me-1"></i>{{ c.sillon }}</div>{% endif %}
           {% if c.servicio %}<div><i class="bi bi-clipboard2-pulse me-1"></i>{{ c.servicio }}</div>{% endif %}
           {% if c.motivo %}<div class="mt-1 fst-italic">{{ c.motivo }}</div>{% endif %}

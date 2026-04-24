@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
-{% block title %}Nuevo Insumo{% endblock %}
+{% block title %}{{ titulo|default:"Insumo" }}{% endblock %}
 {% block breadcrumb %}
-  <a href="{% url 'inventario:lista' %}" class="text-decoration-none text-secondary">Inventario</a> / Nuevo insumo
+  <a href="{% url 'inventario:lista' %}" class="text-decoration-none text-secondary">Inventario</a> / {{ titulo|default:"Insumo" }}
 {% endblock %}
 
 {% block extra_css %}
@@ -48,18 +48,19 @@
 
 {% block content %}
 
-<!-- Encabezado -->
 <div class="d-flex align-items-center gap-3 mb-4">
   <div style="width:44px;height:44px;border-radius:12px;
               background:linear-gradient(135deg,#f97316,#fb923c);
               display:flex;align-items:center;justify-content:center;
               color:#fff;font-size:1.25rem;flex-shrink:0;
               box-shadow:0 4px 14px rgba(249,115,22,.35)">
-    <i class="fa-solid fa-box-open"></i>
+    <i class="fa-solid fa-{% if insumo %}pen-to-square{% else %}box-open{% endif %}"></i>
   </div>
   <div>
-    <h4 class="fw-bold mb-0">Nuevo insumo</h4>
-    <div style="font-size:.78rem;color:var(--text-3)">Registra un insumo en el inventario</div>
+    <h4 class="fw-bold mb-0">{{ titulo|default:"Insumo" }}</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">
+      {% if insumo %}Actualiza los datos del insumo{% else %}Registra un nuevo insumo en el inventario{% endif %}
+    </div>
   </div>
 </div>
 
@@ -80,99 +81,112 @@
         </div>
         <div class="card-body">
           <div class="row g-3">
-            {% for field in form %}
-            {% if field.name == 'nombre' %}
+
+            {# Nombre #}
             <div class="col-12">
               <label class="form-label">
-                <i class="fa-solid fa-tag fa-xs me-1" style="color:#f97316"></i>{{ field.label }}
+                <i class="fa-solid fa-tag fa-xs me-1" style="color:#f97316"></i>{{ form.nombre.label }}
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-tag" style="color:#f97316"></i>
-                {{ field }}
+                {{ form.nombre }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.nombre.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.nombre.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'categoria' %}
+            {# Categoría #}
             <div class="col-12">
               <label class="form-label">
-                <i class="fa-solid fa-layer-group fa-xs me-1" style="color:#8b5cf6"></i>{{ field.label }}
+                <i class="fa-solid fa-layer-group fa-xs me-1" style="color:#8b5cf6"></i>{{ form.categoria.label }}
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-layer-group" style="color:#8b5cf6"></i>
-                {{ field }}
+                {{ form.categoria }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.categoria.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.categoria.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'descripcion' %}
+            {# Descripción #}
             <div class="col-12">
               <label class="form-label">
-                <i class="fa-solid fa-align-left fa-xs me-1" style="color:var(--text-3)"></i>{{ field.label }}
+                <i class="fa-solid fa-align-left fa-xs me-1" style="color:var(--text-3)"></i>{{ form.descripcion.label }}
               </label>
-              <div class="input-icon-wrap">
-                <i class="input-icon top fa-solid fa-align-left" style="color:var(--text-3)"></i>
-                {{ field }}
-              </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {{ form.descripcion }}
+              {% if form.descripcion.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.descripcion.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'unidad' %}
+            {# Unidad #}
             <div class="col-12 col-sm-6">
               <label class="form-label">
-                <i class="fa-solid fa-ruler fa-xs me-1" style="color:#06b6d4"></i>{{ field.label }}
+                <i class="fa-solid fa-ruler fa-xs me-1" style="color:#06b6d4"></i>{{ form.unidad.label }}
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-ruler" style="color:#06b6d4"></i>
-                {{ field }}
+                {{ form.unidad }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.unidad.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.unidad.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'stock_actual' %}
-            <div class="col-6 col-sm-3">
+            {# Fecha de vencimiento #}
+            <div class="col-12 col-sm-6">
               <label class="form-label">
-                <i class="fa-solid fa-cubes fa-xs me-1" style="color:#22c55e"></i>{{ field.label }}
+                <i class="fa-solid fa-calendar-xmark fa-xs me-1" style="color:#ef4444"></i>{{ form.fecha_vencimiento.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-calendar-xmark" style="color:#ef4444"></i>
+                {{ form.fecha_vencimiento }}
+              </div>
+              {% if form.fecha_vencimiento.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.fecha_vencimiento.errors.0 }}</div>{% endif %}
+            </div>
+
+            {# Stock actual #}
+            <div class="col-6 col-sm-4">
+              <label class="form-label">
+                <i class="fa-solid fa-cubes fa-xs me-1" style="color:#22c55e"></i>{{ form.stock_actual.label }}
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-cubes" style="color:#22c55e;font-size:.78rem"></i>
-                {{ field }}
+                {{ form.stock_actual }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.stock_actual.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.stock_actual.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'stock_minimo' %}
-            <div class="col-6 col-sm-3">
+            {# Stock mínimo #}
+            <div class="col-6 col-sm-4">
               <label class="form-label">
-                <i class="fa-solid fa-triangle-exclamation fa-xs me-1" style="color:#f59e0b"></i>{{ field.label }}
+                <i class="fa-solid fa-triangle-exclamation fa-xs me-1" style="color:#f59e0b"></i>{{ form.stock_minimo.label }}
               </label>
               <div class="input-icon-wrap">
                 <i class="input-icon fa-solid fa-triangle-exclamation" style="color:#f59e0b;font-size:.78rem"></i>
-                {{ field }}
+                {{ form.stock_minimo }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.stock_minimo.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.stock_minimo.errors.0 }}</div>{% endif %}
             </div>
 
-            {% elif field.name == 'precio_unitario' %}
-            <div class="col-12 col-sm-6">
+            {# Precio unitario #}
+            <div class="col-12 col-sm-4">
               <label class="form-label">
-                <i class="fa-solid fa-tag fa-xs me-1" style="color:var(--accent)"></i>{{ field.label }}
+                <i class="fa-solid fa-dollar-sign fa-xs me-1" style="color:var(--accent)"></i>{{ form.precio_unitario.label }}
               </label>
               <div class="input-icon-wrap">
-                <i class="input-icon fa-solid fa-bolivar-sign" style="color:var(--accent)"></i>
-                {{ field }}
+                <i class="input-icon fa-solid fa-dollar-sign" style="color:var(--accent)"></i>
+                {{ form.precio_unitario }}
               </div>
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              {% if form.precio_unitario.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.precio_unitario.errors.0 }}</div>{% endif %}
             </div>
 
-            {% else %}
+            {# Proveedor #}
             <div class="col-12">
-              <label class="form-label">{{ field.label }}</label>
-              {{ field }}
-              {% if field.errors %}<div class="text-danger" style="font-size:.78rem">{{ field.errors.0 }}</div>{% endif %}
+              <label class="form-label">
+                <i class="fa-solid fa-truck fa-xs me-1" style="color:var(--text-3)"></i>{{ form.proveedor.label }}
+              </label>
+              <div class="input-icon-wrap">
+                <i class="input-icon fa-solid fa-truck" style="color:var(--text-3)"></i>
+                {{ form.proveedor }}
+              </div>
+              {% if form.proveedor.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.proveedor.errors.0 }}</div>{% endif %}
             </div>
-            {% endif %}
-            {% endfor %}
+
           </div>
         </div>
       </div>
@@ -182,7 +196,8 @@
           <i class="fa-solid fa-xmark me-1"></i>Cancelar
         </a>
         <button type="submit" class="btn btn-primary px-4">
-          <i class="fa-solid fa-floppy-disk me-1"></i>Guardar insumo
+          <i class="fa-solid fa-floppy-disk me-1"></i>
+          {% if insumo %}Guardar cambios{% else %}Registrar insumo{% endif %}
         </button>
       </div>
 

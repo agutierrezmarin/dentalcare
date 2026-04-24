@@ -1,0 +1,146 @@
+{% extends "base/base.html" %}
+{% block title %}Categorías de Inventario{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'inventario:lista' %}" class="text-decoration-none text-secondary">Inventario</a> / Categorías
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Categorías de insumos</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">Organiza los insumos por grupos</div>
+  </div>
+  <a href="{% url 'inventario:lista' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Volver al inventario
+  </a>
+</div>
+
+<div class="row g-4">
+
+  {# ── Panel nueva categoría ── #}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;
+                      background:rgba(139,92,246,.14);color:#8b5cf6;
+                      display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:.92rem">Nueva categoría</div>
+            <div style="font-size:.72rem;color:var(--text-3)">Agrega un nuevo grupo</div>
+          </div>
+        </div>
+        <form method="post" action="{% url 'inventario:categoria_crear' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}
+              <div class="text-danger" style="font-size:.78rem">{{ form.nombre.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar categoría
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Lista de categorías ── #}
+  <div class="col-12 col-md-8">
+    <div class="card">
+      <div class="card-body p-0">
+        {% if categorias %}
+        <ul class="list-group list-group-flush" style="border-radius:var(--radius)">
+          {% for cat in categorias %}
+          <li class="list-group-item d-flex align-items-center gap-3"
+              style="background:var(--bg-surface);border-color:var(--border-light);padding:.85rem 1.1rem">
+
+            <div style="width:36px;height:36px;border-radius:10px;
+                        background:rgba(139,92,246,.12);color:#8b5cf6;
+                        display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0">
+              <i class="fa-solid fa-tags"></i>
+            </div>
+
+            <span style="flex:1;font-weight:500;font-size:.9rem">{{ cat.nombre }}</span>
+
+            {# Contador de insumos en esta categoría #}
+            <span style="font-size:.75rem;color:var(--text-3);background:var(--bg-base);
+                         padding:.2rem .6rem;border-radius:20px;border:1px solid var(--border-light)">
+              {{ cat.insumo_set.count }} insumo{{ cat.insumo_set.count|pluralize }}
+            </span>
+
+            {# Editar inline #}
+            <button class="btn btn-sm btn-outline-secondary"
+                    onclick="abrirEditarCategoria({{ cat.pk }}, '{{ cat.nombre|escapejs }}')"
+                    title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+
+            {# Eliminar #}
+            {% if cat.insumo_set.count == 0 %}
+            <form method="post" action="{% url 'inventario:categoria_eliminar' cat.pk %}"
+                  onsubmit="return confirm('¿Eliminar la categoría «{{ cat.nombre }}»?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+            {% else %}
+            <button class="btn btn-sm btn-outline-secondary" disabled title="Tiene insumos asignados">
+              <i class="bi bi-trash3"></i>
+            </button>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center text-secondary py-5">
+          <i class="fa-solid fa-tags fa-2x mb-3 d-block" style="opacity:.3"></i>
+          No hay categorías registradas
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Modal editar categoría ── #}
+<div class="modal fade" id="modalEditarCat" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:14px">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h6 class="modal-title">Editar categoría</h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formEditarCat" action="">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Nombre</label>
+          <input type="text" name="nombre" id="inputEditarCat" class="form-control" required>
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirEditarCategoria(pk, nombre) {
+  var baseUrl = "{% url 'inventario:categoria_editar' 0 %}".replace('/0/', '/' + pk + '/');
+  document.getElementById('formEditarCat').action = baseUrl;
+  document.getElementById('inputEditarCat').value = nombre;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditarCat')).show();
+}
+</script>
+{% endblock %}

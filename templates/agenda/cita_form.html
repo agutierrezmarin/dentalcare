@@ -203,20 +203,20 @@
       <input type="hidden" name="paciente" value="{{ cita.paciente.pk }}">
       {% if cita.tratamiento %}<input type="hidden" name="tratamiento" value="{{ cita.tratamiento.pk }}">{% endif %}
 
-      <!-- Doctor / Sillón -->
+      <!-- Doctor / Sillón (modo editar) -->
       <div class="card mb-3">
         <div class="form-section-header">
           <div class="form-section-icon" style="background:rgba(78,159,245,.14);color:#4e9ff5">
             <i class="fa-solid fa-user-doctor"></i>
           </div>
           <div>
-            <div class="form-section-title">Asignación</div>
-            <div class="form-section-sub">Doctor y sillón para la cita</div>
+            <div class="form-section-title">Asignación clínica</div>
+            <div class="form-section-sub">Doctor, espacio y servicio para la cita</div>
           </div>
         </div>
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-12 col-sm-6">
+            <div class="col-12">
               <label class="form-label">
                 <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:#4e9ff5"></i>Doctor <span class="text-danger">*</span>
               </label>
@@ -226,14 +226,9 @@
               </div>
               {% if form.doctor.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.doctor.errors.0 }}</div>{% endif %}
             </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-label">
-                <i class="fa-solid fa-chair fa-xs me-1" style="color:#f59e0b"></i>Sillón
-              </label>
-              <div class="input-icon-wrap">
-                <i class="input-icon fa-solid fa-chair" style="color:#f59e0b"></i>
-                {{ form.sillon }}
-              </div>
+            <!-- Panel espacios asignados al doctor -->
+            <div class="col-12" id="espacioPanelEdit" style="display:none">
+              <div id="espacioCardEdit"></div>
             </div>
             <div class="col-12">
               <label class="form-label">
@@ -686,7 +681,7 @@
       </div>
     </div>
 
-    <!-- ── Doctor / Sillón / Servicio ── -->
+    <!-- ── Doctor / Espacio / Sillón / Servicio ── -->
     <div class="col-12">
       <div class="card">
         <div class="form-section-header">
@@ -695,12 +690,12 @@
           </div>
           <div>
             <div class="form-section-title">Asignación clínica</div>
-            <div class="form-section-sub">Doctor, sillón y servicio a realizar</div>
+            <div class="form-section-sub">Doctor, espacio asignado y servicio a realizar</div>
           </div>
         </div>
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-12 col-sm-6">
+            <div class="col-12">
               <label class="form-label">
                 <i class="fa-solid fa-user-doctor fa-xs me-1" style="color:#4e9ff5"></i>Doctor <span class="text-danger">*</span>
               </label>
@@ -710,15 +705,11 @@
               </div>
               {% if form.doctor.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ form.doctor.errors.0 }}</div>{% endif %}
             </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-label">
-                <i class="fa-solid fa-chair fa-xs me-1" style="color:#f59e0b"></i>Sillón
-              </label>
-              <div class="input-icon-wrap">
-                <i class="input-icon fa-solid fa-chair" style="color:#f59e0b"></i>
-                {{ form.sillon }}
-              </div>
+            <!-- Panel espacios asignados al doctor (se muestra al seleccionar doctor) -->
+            <div class="col-12" id="espacioPanel" style="display:none">
+              <div id="espacioCard"></div>
             </div>
+
             <div class="col-12">
               <label class="form-label">
                 <i class="fa-solid fa-stethoscope fa-xs me-1" style="color:#ec4899"></i>Servicio
@@ -917,6 +908,76 @@
 
 {% block extra_js %}
 <script>
+/* ── Paneles de espacios asignados al doctor ── */
+(function () {
+  var ESPACIO_URL = '{% url "agenda:espacio_doctor" %}';
+
+  var EC = {
+    disponible:    { bg:'rgba(52,211,153,.12)',  border:'rgba(52,211,153,.35)',  text:'#059669' },
+    ocupado:       { bg:'rgba(96,165,250,.12)',  border:'rgba(96,165,250,.35)',  text:'#1d4ed8' },
+    mantenimiento: { bg:'rgba(251,191,36,.12)',  border:'rgba(251,191,36,.35)',  text:'#d97706' },
+    inactivo:      { bg:'rgba(156,163,175,.12)', border:'rgba(156,163,175,.35)', text:'#6b7280' },
+  };
+
+  function buildEspacioHtml(e) {
+    var c = EC[e.estado] || EC.disponible;
+    return '<div style="display:flex;align-items:center;gap:.75rem;font-size:.84rem;' +
+           'border-radius:12px;padding:.65rem .9rem;border:1.5px solid ' + c.border + ';' +
+           'background:' + c.bg + ';margin-bottom:.4rem">' +
+      '<div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;' +
+             'background:' + e.color + '22;border:2px solid ' + e.color + '44;' +
+             'display:flex;align-items:center;justify-content:center">' +
+        '<i class="fa-solid fa-hospital" style="color:' + e.color + '"></i>' +
+      '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">' +
+          '<span style="font-weight:700;font-size:.87rem;color:var(--text-1)">' + e.nombre + '</span>' +
+          '<code style="font-size:.7rem;background:var(--bg-base);padding:.1rem .35rem;border-radius:5px;color:var(--text-2)">' + e.codigo + '</code>' +
+          '<span style="font-size:.68rem;font-weight:700;padding:.12rem .5rem;border-radius:20px;' +
+                'background:' + c.bg + ';color:' + c.text + ';border:1px solid ' + c.border + '">' +
+            e.estado_display + '</span>' +
+        '</div>' +
+        '<div style="font-size:.74rem;color:var(--text-2);margin-top:.15rem;display:flex;gap:.85rem;flex-wrap:wrap">' +
+          '<span><i class="fa-solid fa-layer-group fa-xs me-1"></i>' + e.tipo + '</span>' +
+          (e.ubicacion ? '<span><i class="fa-solid fa-location-dot fa-xs me-1"></i>' + e.ubicacion + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderEspacios(espacios, cardEl, panelEl) {
+    if (!espacios || !espacios.length) { panelEl.style.display = 'none'; return; }
+    cardEl.innerHTML = espacios.map(buildEspacioHtml).join('');
+    panelEl.style.display = '';
+  }
+
+  function fetchEspacios(doctorId, cardEl, panelEl) {
+    if (!doctorId) { panelEl.style.display = 'none'; return; }
+    fetch(ESPACIO_URL + '?doctor_id=' + doctorId)
+      .then(function(r){ return r.json(); })
+      .then(function(data){ renderEspacios(data.espacios, cardEl, panelEl); })
+      .catch(function(){ panelEl.style.display = 'none'; });
+  }
+
+  var fDoctor = document.getElementById('id_doctor');
+
+  /* Modo nueva cita */
+  var panel = document.getElementById('espacioPanel');
+  var card  = document.getElementById('espacioCard');
+  if (fDoctor && panel && card) {
+    fDoctor.addEventListener('change', function(){ fetchEspacios(this.value, card, panel); });
+    if (fDoctor.value) fetchEspacios(fDoctor.value, card, panel);
+  }
+
+  /* Modo editar cita */
+  var panelE = document.getElementById('espacioPanelEdit');
+  var cardE  = document.getElementById('espacioCardEdit');
+  if (fDoctor && panelE && cardE) {
+    fDoctor.addEventListener('change', function(){ fetchEspacios(this.value, cardE, panelE); });
+    if (fDoctor.value) fetchEspacios(fDoctor.value, cardE, panelE);
+  }
+})();
+
 /* ── Verificación de disponibilidad en tiempo real ── */
 (function () {
   const DISP_URL = '{% url "agenda:disponibilidad" %}';

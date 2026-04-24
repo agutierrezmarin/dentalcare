@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py makemigrations inventario)",
+      "Bash(python3 manage.py makemigrations inventario)"
+    ]
+  }
+}

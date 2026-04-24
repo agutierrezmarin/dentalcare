@@ -1,0 +1,238 @@
+{% extends "base/base.html" %}
+{% block title %}Notificaciones{% endblock %}
+{% block breadcrumb %}Notificaciones{% endblock %}
+
+{% block extra_css %}
+<style>
+.notif-row {
+  display: flex; align-items: flex-start; gap: .85rem;
+  padding: .9rem 1.1rem;
+  border-bottom: 1px solid var(--border-light);
+  transition: background .12s;
+}
+.notif-row:last-child { border-bottom: none; }
+.notif-row.unread { background: rgba(45,184,122,.05); }
+.notif-row:hover { background: var(--bg-hover, rgba(0,0,0,.03)); }
+.notif-icon {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.notif-tipo-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .15rem .55rem; border-radius: 20px;
+  font-size: .68rem; font-weight: 700;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">Notificaciones</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">
+      {% if usuario_es_admin %}Alertas de toda la agenda clínica
+      {% else %}Actividad reciente de tu agenda{% endif %}
+    </div>
+  </div>
+  {% if notif_no_leidas %}
+  <button id="btnTodasLeidasPage" class="btn btn-outline-secondary btn-sm">
+    <i class="fa-solid fa-check-double me-1"></i>Marcar todas como leídas
+  </button>
+  {% endif %}
+</div>
+
+{% if notificaciones %}
+
+{# ── Filtros rápidos ── #}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <button class="btn btn-sm btn-primary notif-filter active" data-filter="all">Todas</button>
+  <button class="btn btn-sm btn-outline-secondary notif-filter" data-filter="nueva_cita">
+    <i class="fa-solid fa-calendar-plus fa-xs me-1"></i>Nuevas citas
+  </button>
+  <button class="btn btn-sm btn-outline-secondary notif-filter" data-filter="confirmada">
+    <i class="fa-solid fa-circle-check fa-xs me-1"></i>Confirmadas
+  </button>
+  <button class="btn btn-sm btn-outline-secondary notif-filter" data-filter="cancelada">
+    <i class="fa-solid fa-calendar-xmark fa-xs me-1"></i>Canceladas
+  </button>
+  <button class="btn btn-sm btn-outline-secondary notif-filter" data-filter="no_asistio">
+    <i class="fa-solid fa-user-slash fa-xs me-1"></i>No asistieron
+  </button>
+  <button class="btn btn-sm btn-outline-secondary notif-filter" data-filter="reagendada">
+    <i class="fa-solid fa-calendar-days fa-xs me-1"></i>Reagendadas
+  </button>
+</div>
+
+{# ── Contador de sin resultados en filtro ── #}
+<div id="noResultFilter" class="text-center py-3" style="display:none;color:var(--text-3);font-size:.875rem">
+  <i class="fa-solid fa-filter-circle-xmark me-2"></i>Sin notificaciones de este tipo
+</div>
+
+<div class="card">
+  <div class="card-body p-0" id="notifContainer">
+    {% for n in notificaciones %}
+    <div class="notif-row {% if not n.leida %}unread{% endif %}"
+         data-tipo="{{ n.tipo }}" data-pk="{{ n.pk }}">
+
+      {# Icono por tipo #}
+      <div class="notif-icon
+        {% if n.tipo == 'nueva_cita' %}style='background:rgba(96,165,250,.15);color:#3b82f6'
+        {% elif n.tipo == 'confirmada' %}style='background:rgba(52,211,153,.15);color:#10b981'
+        {% elif n.tipo == 'cancelada' %}style='background:rgba(248,113,113,.15);color:#ef4444'
+        {% elif n.tipo == 'no_asistio' %}style='background:rgba(251,191,36,.15);color:#f59e0b'
+        {% elif n.tipo == 'reagendada' %}style='background:rgba(167,139,250,.15);color:#8b5cf6'
+        {% else %}style='background:rgba(156,163,175,.15);color:#6b7280'{% endif %}">
+        {% if n.tipo == 'nueva_cita' %}<i class="fa-solid fa-calendar-plus"></i>
+        {% elif n.tipo == 'confirmada' %}<i class="fa-solid fa-circle-check"></i>
+        {% elif n.tipo == 'cancelada' %}<i class="fa-solid fa-calendar-xmark"></i>
+        {% elif n.tipo == 'no_asistio' %}<i class="fa-solid fa-user-slash"></i>
+        {% elif n.tipo == 'reagendada' %}<i class="fa-solid fa-calendar-days"></i>
+        {% else %}<i class="fa-solid fa-bell"></i>{% endif %}
+      </div>
+
+      <div style="flex:1;min-width:0">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <span style="font-weight:{% if not n.leida %}700{% else %}500{% endif %};font-size:.88rem;color:var(--text-1)">
+            {{ n.titulo }}
+          </span>
+          <span class="notif-tipo-badge
+            {% if n.tipo == 'nueva_cita' %}style='background:rgba(96,165,250,.15);color:#3b82f6'
+            {% elif n.tipo == 'confirmada' %}style='background:rgba(52,211,153,.15);color:#10b981'
+            {% elif n.tipo == 'cancelada' %}style='background:rgba(248,113,113,.15);color:#ef4444'
+            {% elif n.tipo == 'no_asistio' %}style='background:rgba(251,191,36,.15);color:#f59e0b'
+            {% elif n.tipo == 'reagendada' %}style='background:rgba(167,139,250,.15);color:#8b5cf6'
+            {% else %}style='background:rgba(156,163,175,.15);color:#6b7280'{% endif %}">
+            {{ n.get_tipo_display }}
+          </span>
+          {% if not n.leida %}
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>
+          {% endif %}
+        </div>
+
+        {# Para admin: mostrar el doctor responsable #}
+        {% if usuario_es_admin and n.cita and n.cita.doctor %}
+        <div style="font-size:.75rem;color:var(--accent);font-weight:600;margin-bottom:.25rem">
+          <i class="fa-solid fa-user-doctor fa-xs me-1"></i>{{ n.cita.doctor.get_full_name|default:n.cita.doctor.username }}
+        </div>
+        {% endif %}
+
+        <div style="font-size:.82rem;color:var(--text-2);line-height:1.5">{{ n.mensaje }}</div>
+        <div class="d-flex align-items-center gap-3 mt-1 flex-wrap">
+          <span style="font-size:.72rem;color:var(--text-3)">
+            <i class="fa-solid fa-clock fa-xs me-1"></i>{{ n.creada_en|date:"d/m/Y H:i" }}
+          </span>
+          {% if n.cita %}
+          <a href="{% url 'agenda:detalle_cita' n.cita.pk %}"
+             style="font-size:.72rem;color:var(--accent);font-weight:600;text-decoration:none">
+            <i class="fa-solid fa-arrow-up-right-from-square fa-xs me-1"></i>Ver cita
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Marcar leída #}
+      {% if not n.leida %}
+      <button class="btn-marcar-leida"
+              data-pk="{{ n.pk }}"
+              data-url="{% url 'agenda:marcar_leida' n.pk %}"
+              title="Marcar como leída"
+              style="flex-shrink:0;background:none;border:none;cursor:pointer;
+                     color:var(--text-3);padding:.25rem .35rem;border-radius:6px;
+                     transition:color .12s;font-size:.8rem">
+        <i class="fa-solid fa-check"></i>
+      </button>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5" style="color:var(--text-3)">
+    <i class="fa-solid fa-bell-slash fa-3x mb-3 d-block" style="opacity:.25"></i>
+    <div style="font-size:.95rem;font-weight:600">Sin notificaciones</div>
+    <div style="font-size:.82rem;margin-top:.35rem">Las actividades de tu agenda aparecerán aquí</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var TODAS_URL = "{% url 'agenda:todas_leidas' %}";
+  var csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+
+  function marcarLeida(pk, url, row) {
+    fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken },
+    }).then(function () {
+      row.classList.remove('unread');
+      row.style.background = '';
+      var dot = row.querySelector('[style*="border-radius:50%"]');
+      if (dot) dot.remove();
+      var titulo = row.querySelector('[style*="font-weight:700"]');
+      if (titulo) titulo.style.fontWeight = '500';
+      var btnLeer = row.querySelector('.btn-marcar-leida');
+      if (btnLeer) btnLeer.remove();
+    });
+  }
+
+  // Click en botón de cada notificación
+  document.querySelectorAll('.btn-marcar-leida').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      marcarLeida(btn.dataset.pk, btn.dataset.url, btn.closest('.notif-row'));
+    });
+  });
+
+  // Marcar todas desde página
+  var btnTodas = document.getElementById('btnTodasLeidasPage');
+  if (btnTodas) {
+    btnTodas.addEventListener('click', function () {
+      fetch(TODAS_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+      }).then(function () {
+        document.querySelectorAll('.notif-row.unread').forEach(function (row) {
+          row.classList.remove('unread');
+          row.style.background = '';
+          var dot  = row.querySelector('[style*="border-radius:50%"]');
+          if (dot) dot.remove();
+          var btn2 = row.querySelector('.btn-marcar-leida');
+          if (btn2) btn2.remove();
+          var titulo = row.querySelector('[style*="font-weight:700"]');
+          if (titulo) titulo.style.fontWeight = '500';
+        });
+        btnTodas.remove();
+      });
+    });
+  }
+
+  // Filtros rápidos
+  var noResult = document.getElementById('noResultFilter');
+  document.querySelectorAll('.notif-filter').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.notif-filter').forEach(function (b) {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.add('active', 'btn-primary');
+      btn.classList.remove('btn-outline-secondary');
+
+      var filtro = btn.dataset.filter;
+      var visible = 0;
+      document.querySelectorAll('.notif-row').forEach(function (row) {
+        var show = filtro === 'all' || row.dataset.tipo === filtro;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      if (noResult) noResult.style.display = visible === 0 ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends "base/base.html" %}
+{% block title %}Espacios Clínicos{% endblock %}
+{% block breadcrumb %}Espacios Clínicos{% endblock %}
+
+{% block extra_css %}
+<style>
+.espacio-card {
+  border-radius: 14px;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-surface);
+  transition: box-shadow .18s, transform .18s;
+  overflow: hidden;
+}
+.espacio-card:hover {
+  box-shadow: 0 8px 28px rgba(0,0,0,.1);
+  transform: translateY(-2px);
+}
+.espacio-card-top {
+  height: 6px;
+}
+.espacio-tipo-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .2rem .65rem; border-radius: 20px;
+  font-size: .72rem; font-weight: 600;
+  background: var(--bg-base); color: var(--text-2);
+  border: 1px solid var(--border-light);
+}
+.estado-pill {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25rem .7rem; border-radius: 20px;
+  font-size: .75rem; font-weight: 700;
+}
+.estado-disponible    { background: rgba(52,211,153,.15);  color: #059669; }
+.estado-ocupado       { background: rgba(96,165,250,.15);  color: #1d4ed8; }
+.estado-mantenimiento { background: rgba(251,191,36,.15);  color: #d97706; }
+.estado-inactivo      { background: rgba(156,163,175,.15); color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">Espacios clínicos</h4>
+    <div style="font-size:.78rem;color:var(--text-3)">Administración de sillones, consultorios y salas</div>
+  </div>
+  <a href="{% url 'espacios:crear' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus me-1"></i>Nuevo espacio
+  </a>
+</div>
+
+{# ── Resumen rápido ── #}
+{% if espacios %}
+<div class="row g-3 mb-4">
+  {% regroup espacios by get_estado_display as por_estado %}
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div style="font-size:1.6rem;font-weight:800;color:var(--accent)">{{ espacios|length }}</div>
+      <div style="font-size:.75rem;color:var(--text-2)">Total activos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div style="font-size:1.6rem;font-weight:800;color:#059669">
+        {% with c=0 %}{% for e in espacios %}{% if e.estado == 'disponible' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}{% endwith %}
+        {{ espacios|dictsortreversed:"estado"|length }}
+      </div>
+      <div style="font-size:.75rem;color:var(--text-2)">Disponibles</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div style="font-size:1.6rem;font-weight:800;color:#d97706">
+        {% for e in espacios %}{% if e.revision_vencida or e.revision_proxima %}{% if forloop.first %}1{% endif %}{% endif %}{% endfor %}
+      </div>
+      <div style="font-size:.75rem;color:var(--text-2)">Revisiones pendientes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div style="font-size:1.6rem;font-weight:800;color:#d97706">
+        {% for e in espacios %}{% if e.estado == 'mantenimiento' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+      </div>
+      <div style="font-size:.75rem;color:var(--text-2)">En mantenimiento</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Alertas de revisión ── #}
+{% for e in espacios %}{% if e.revision_vencida %}
+{% if forloop.first %}
+<div class="alert alert-danger mb-3">
+  <strong><i class="fa-solid fa-circle-xmark me-1"></i>Revisiones vencidas:</strong>
+  {% for esp in espacios %}{% if esp.revision_vencida %}{{ esp.nombre }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+</div>
+{% endif %}
+{% endif %}{% endfor %}
+
+{# ── Grid de espacios ── #}
+<div class="row g-3">
+  {% for e in espacios %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="espacio-card">
+      {# Barra de color del espacio #}
+      <div class="espacio-card-top" style="background:{{ e.color }}"></div>
+
+      <div class="p-3">
+        {# Cabecera #}
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <div style="width:42px;height:42px;border-radius:11px;flex-shrink:0;
+                      background:{{ e.color }}22;
+                      display:flex;align-items:center;justify-content:center;font-size:1.15rem">
+            {% if e.tipo == 'sillon' %}🦷
+            {% elif e.tipo == 'rayos_x' %}☢️
+            {% elif e.tipo == 'esterilizacion' %}🧪
+            {% elif e.tipo == 'espera' %}🪑
+            {% elif e.tipo == 'cirugia' %}🔬
+            {% elif e.tipo == 'laboratorio' %}⚗️
+            {% elif e.tipo == 'bodega' %}📦
+            {% elif e.tipo == 'oficina' %}💼
+            {% else %}🏥
+            {% endif %}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span style="font-weight:700;font-size:.95rem">{{ e.nombre }}</span>
+              <span style="font-size:.7rem;color:var(--text-3);font-family:'Roboto Mono',monospace;
+                           background:var(--bg-base);padding:.1rem .4rem;border-radius:6px">
+                {{ e.codigo }}
+              </span>
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+              <span class="espacio-tipo-badge">{{ e.get_tipo_display }}</span>
+              <span class="estado-pill estado-{{ e.estado }}">
+                {% if e.estado == 'disponible' %}<i class="fa-solid fa-circle-check fa-2xs"></i>
+                {% elif e.estado == 'ocupado' %}<i class="fa-solid fa-user fa-2xs"></i>
+                {% elif e.estado == 'mantenimiento' %}<i class="fa-solid fa-wrench fa-2xs"></i>
+                {% else %}<i class="fa-solid fa-ban fa-2xs"></i>
+                {% endif %}
+                {{ e.get_estado_display }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {# Info adicional #}
+        <div style="font-size:.8rem;color:var(--text-2);border-top:1px solid var(--border-light);
+                    padding-top:.65rem;margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+          {% for doc in e.doctores.all %}
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-user-doctor" style="color:var(--accent);width:14px"></i>
+            {{ doc.get_full_name|default:doc.username }}
+          </div>
+          {% endfor %}
+          {% if e.ubicacion %}
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-location-dot" style="color:var(--text-3);width:14px"></i>
+            {{ e.ubicacion }}
+          </div>
+          {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-users" style="color:var(--text-3);width:14px"></i>
+            Capacidad: {{ e.capacidad }} paciente{{ e.capacidad|pluralize }}
+          </div>
+          {% if e.proxima_revision %}
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-calendar-check"
+               style="width:14px;color:{% if e.revision_vencida %}#ef4444{% elif e.revision_proxima %}#d97706{% else %}var(--text-3){% endif %}"></i>
+            <span style="{% if e.revision_vencida %}color:#ef4444;font-weight:600{% elif e.revision_proxima %}color:#d97706;font-weight:600{% endif %}">
+              Revisión: {{ e.proxima_revision }}
+              {% if e.revision_vencida %}<span class="ms-1" style="font-size:.68rem">(VENCIDA)</span>
+              {% elif e.revision_proxima %}<span class="ms-1" style="font-size:.68rem">(PRÓXIMA)</span>
+              {% endif %}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+
+        {# Acciones #}
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+          <a href="{% url 'espacios:detalle' e.pk %}" class="btn btn-sm btn-primary flex-fill">
+            <i class="fa-solid fa-eye me-1"></i>Ver detalle
+          </a>
+          <a href="{% url 'espacios:editar' e.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {# Cambiar estado rápido #}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal" data-bs-target="#modalEstado{{ e.pk }}"
+                  title="Cambiar estado">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# Modal cambiar estado #}
+    <div class="modal fade" id="modalEstado{{ e.pk }}" tabindex="-1">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:14px">
+          <div class="modal-header" style="border-color:var(--border)">
+            <h6 class="modal-title">Cambiar estado — {{ e.nombre }}</h6>
+            <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <form method="post" action="{% url 'espacios:estado' e.pk %}">
+            {% csrf_token %}
+            <div class="modal-body">
+              <select name="estado" class="form-select">
+                {% for val, label in e.ESTADO_CHOICES %}
+                <option value="{{ val }}" {% if e.estado == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="modal-footer" style="border-color:var(--border)">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-check me-1"></i>Actualizar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card text-center py-5" style="color:var(--text-3)">
+      <i class="fa-solid fa-hospital fa-2x mb-3 d-block" style="opacity:.3"></i>
+      <div>No hay espacios registrados</div>
+      <a href="{% url 'espacios:crear' %}" class="btn btn-primary btn-sm mt-3 mx-auto" style="width:fit-content">
+        <i class="bi bi-plus me-1"></i>Agregar primer espacio
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

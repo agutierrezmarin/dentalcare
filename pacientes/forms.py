@@ -29,6 +29,44 @@ class PacienteForm(forms.ModelForm):
             'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
+    def clean_ci(self):
+        ci = self.cleaned_data.get('ci', '').strip()
+        if not ci:
+            return None
+        qs = Paciente.objects.filter(ci=ci)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        existente = qs.first()
+        if existente:
+            self._paciente_dup = existente
+            raise forms.ValidationError(
+                f'Ya existe un paciente registrado con esta C.I.: {existente}'
+            )
+        return ci
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Only check name+dob when no CI was submitted at all
+        if self.data.get('ci', '').strip():
+            return cleaned_data
+        nombres   = (cleaned_data.get('nombres')   or '').strip()
+        apellidos = (cleaned_data.get('apellidos') or '').strip()
+        fecha     = cleaned_data.get('fecha_nacimiento')
+        if nombres and apellidos and fecha:
+            qs = Paciente.objects.filter(
+                nombres__iexact=nombres, apellidos__iexact=apellidos,
+                fecha_nacimiento=fecha
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            existente = qs.first()
+            if existente:
+                self._paciente_dup = existente
+                raise forms.ValidationError(
+                    f'Ya existe un paciente con ese nombre y fecha de nacimiento: {existente}'
+                )
+        return cleaned_data
+
 
 class AlergiaForm(forms.ModelForm):
     class Meta:
@@ -69,4 +107,42 @@ class PacienteRapidoForm(forms.ModelForm):
 
     def clean_ci(self):
         ci = self.cleaned_data.get('ci', '').strip()
-        return ci if ci else None
+        if not ci:
+            return None
+        # Detect CI duplicate — store it but do NOT raise; get_or_create_paciente() will reuse
+        existente = Paciente.objects.filter(ci=ci).first()
+        if existente:
+            self._paciente_dup = existente
+        return ci
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # If CI already matched an existing patient, skip name+dob check
+        if getattr(self, '_paciente_dup', None):
+            return cleaned_data
+        # No CI provided — check name + apellido + fecha_nacimiento
+        if not self.data.get('ci', '').strip():
+            nombres   = (cleaned_data.get('nombres')   or '').strip()
+            apellidos = (cleaned_data.get('apellidos') or '').strip()
+            fecha     = cleaned_data.get('fecha_nacimiento')
+            if nombres and apellidos and fecha:
+                existente = Paciente.objects.filter(
+                    nombres__iexact=nombres, apellidos__iexact=apellidos,
+                    fecha_nacimiento=fecha
+                ).first()
+                if existente:
+                    self._paciente_dup = existente
+        return cleaned_data
+
+    def validate_unique(self):
+        # Skip DB uniqueness check on 'ci' when we already know we'll reuse the existing patient
+        if getattr(self, '_paciente_dup', None):
+            return
+        super().validate_unique()
+
+    def get_or_create_paciente(self):
+        """Returns (paciente, creado). Uses existing patient if CI or name+dob matches."""
+        dup = getattr(self, '_paciente_dup', None)
+        if dup:
+            return dup, False
+        return self.save(), True

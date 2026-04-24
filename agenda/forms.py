@@ -10,12 +10,11 @@ from facturacion.models import MetodoPago
 class CitaForm(forms.ModelForm):
     class Meta:
         model = Cita
-        fields = ['paciente', 'doctor', 'sillon', 'servicio', 'tratamiento',
+        fields = ['paciente', 'doctor', 'servicio', 'tratamiento',
                   'fecha', 'hora_inicio', 'hora_fin', 'motivo', 'notas']
         widgets = {
             'paciente':    forms.Select(attrs={'class': 'form-select'}),
             'doctor':      forms.Select(attrs={'class': 'form-select'}),
-            'sillon':      forms.Select(attrs={'class': 'form-select'}),
             'servicio':    forms.Select(attrs={'class': 'form-select'}),
             'tratamiento': forms.HiddenInput(),
             'fecha':       forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),

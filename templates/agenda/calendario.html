@@ -113,6 +113,39 @@
   <div id="calendar"></div>
 </div>
 
+<!-- Barra de confirmación de reagendar (flotante, sin Bootstrap modal para evitar conflictos con FullCalendar drag) -->
+<div id="calDropConfirm"
+     style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+            z-index:1055;background:var(--bg-surface);border:1px solid var(--border);
+            border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.22);
+            padding:1rem 1.25rem;min-width:300px;max-width:430px;width:90%">
+  <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem">
+    <div style="width:38px;height:38px;border-radius:10px;background:rgba(245,158,11,.15);
+                display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="fa-solid fa-calendar-days" style="color:#f59e0b"></i>
+    </div>
+    <div>
+      <div style="font-weight:700;font-size:.88rem;color:var(--text-1)">Reagendar cita</div>
+      <div id="cdcPaciente" style="font-size:.78rem;color:var(--text-2)"></div>
+    </div>
+  </div>
+  <div style="font-size:.82rem;margin-bottom:.85rem;padding:.45rem .65rem;
+              background:var(--bg-base);border-radius:8px;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+    <i class="fa-solid fa-calendar-check" style="color:#f59e0b"></i>
+    <span id="cdcFechaHora" style="font-weight:600;color:var(--text-1)"></span>
+    <span style="color:var(--text-3)">·</span>
+    <span id="cdcDoctor" style="color:var(--text-2)"></span>
+  </div>
+  <div style="display:flex;gap:.5rem">
+    <button id="cdcCancelar" type="button" class="btn btn-outline-secondary btn-sm flex-grow-1">
+      <i class="fa-solid fa-arrow-rotate-left me-1"></i>Cancelar
+    </button>
+    <button id="cdcConfirmar" type="button" class="btn btn-warning btn-sm flex-grow-1" style="color:#fff">
+      <i class="fa-solid fa-check me-1"></i>Confirmar
+    </button>
+  </div>
+</div>
+
 <!-- Modal detalle cita -->
 <div class="modal fade" id="modalCita" tabindex="-1">
   <div class="modal-dialog modal-md">
@@ -184,17 +217,39 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   /* Extrae fecha "YYYY-MM-DD" y hora "HH:MM" de una cadena ISO de FullCalendar.
-     Funciona tanto con offset (-04:00) como sin él. */
+     Funciona con offset (-04:00), sin él, o solo fecha ("YYYY-MM-DD"). */
   function parseFCStr(str) {
-    const base = str.slice(0, 16);           // "2024-01-15T10:00"
-    return { fecha: base.slice(0, 10), hora: base.slice(11, 16) };
+    if (!str) return { fecha: '', hora: '' };
+    const base  = str.slice(0, 19);          // "YYYY-MM-DDTHH:MM:SS"
+    const fecha = base.slice(0, 10);
+    const hora  = base.length >= 16 ? base.slice(11, 16) : '';
+    return { fecha, hora };
   }
 
   /* Suma minutos a una hora "HH:MM" y devuelve "HH:MM" */
   function addMinutes(hora, mins) {
+    if (!hora) return '';
     const [h, m] = hora.split(':').map(Number);
     const d = new Date(2000, 0, 1, h, m + mins);
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  /* Muestra toast breve de éxito o error */
+  function showDropToast(msg, tipo) {
+    var stack = document.getElementById('toastStack');
+    if (!stack) return;
+    var cls  = tipo === 'ok' ? 'sys-toast-success' : 'sys-toast-error';
+    var icon = tipo === 'ok' ? 'fa-circle-check' : 'fa-circle-xmark';
+    var el   = document.createElement('div');
+    el.className = 'sys-toast ' + cls;
+    el.setAttribute('role', 'alert');
+    el.innerHTML =
+      '<div class="sys-toast-icon"><i class="fa-solid ' + icon + '"></i></div>' +
+      '<div class="sys-toast-body">' + msg + '</div>' +
+      '<button class="sys-toast-close" onclick="this.closest(\'.sys-toast\').remove()">' +
+        '<i class="fa-solid fa-xmark"></i></button>';
+    stack.appendChild(el);
+    setTimeout(function () { el.remove(); }, 3500);
   }
 
   const CSRF = '{{ csrf_token }}';
@@ -301,13 +356,9 @@ document.addEventListener('DOMContentLoaded', function () {
               ${p.completada ? '✓ ' : ''}${p.estado_display}
             </span>
           </div>
-          <div class="col-6">
+          <div class="col-12">
             <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Servicio</div>
             <div style="font-size:.83rem">${p.servicio || '—'}</div>
-          </div>
-          <div class="col-6">
-            <div style="font-size:.68rem;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:.2rem">Sillón</div>
-            <div style="font-size:.83rem">${p.sillon || '—'}</div>
           </div>
           ${p.motivo ? `
           <div class="col-12">
@@ -389,28 +440,34 @@ document.addEventListener('DOMContentLoaded', function () {
       new bootstrap.Modal(document.getElementById('modalCita')).show();
     },
 
-    /* ── Arrastrar evento → reprogramar cita ─────────────────────────────── */
-    eventDrop: async function (info) {
-      const { fecha, hora: hi } = parseFCStr(info.event.startStr);
-      const hf = info.event.endStr ? parseFCStr(info.event.endStr).hora : addMinutes(hi, 30);
-      const resp = await fetch(`/agenda/citas/${info.event.id}/mover/`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-        body:    JSON.stringify({ fecha, hora_inicio: hi, hora_fin: hf })
+    /* ── Arrastrar evento → modal de confirmación antes de guardar ────────── */
+    eventDrop: function (info) {
+      const s  = parseFCStr(info.event.startStr);
+      const e  = info.event.endStr ? parseFCStr(info.event.endStr) : null;
+      const hi = s.hora;
+      const hf = e && e.hora ? e.hora : addMinutes(hi, 30);
+
+      if (!hi || !hf || hi >= hf) { info.revert(); return; }
+
+      _pedirConfirmacion({
+        info, fecha: s.fecha, hora_inicio: hi, hora_fin: hf,
+        esDrop: true,
       });
-      if (!resp.ok) info.revert();
     },
 
-    /* ── Redimensionar evento → ajustar hora fin ──────────────────────────── */
-    eventResize: async function (info) {
-      const { fecha, hora: hi } = parseFCStr(info.event.startStr);
-      const hf = info.event.endStr ? parseFCStr(info.event.endStr).hora : hi;
-      const resp = await fetch(`/agenda/citas/${info.event.id}/mover/`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-        body:    JSON.stringify({ fecha, hora_inicio: hi, hora_fin: hf })
+    /* ── Redimensionar evento → modal de confirmación antes de guardar ────── */
+    eventResize: function (info) {
+      const s  = parseFCStr(info.event.startStr);
+      const e  = info.event.endStr ? parseFCStr(info.event.endStr) : null;
+      const hi = s.hora;
+      const hf = e && e.hora ? e.hora : addMinutes(hi, 30);
+
+      if (!hi || !hf || hi >= hf) { info.revert(); return; }
+
+      _pedirConfirmacion({
+        info, fecha: s.fecha, hora_inicio: hi, hora_fin: hf,
+        esDrop: false,
       });
-      if (!resp.ok) info.revert();
     },
 
     /* ── Cambio de tamaño de ventana → vista responsive ─────────────────── */
@@ -427,16 +484,87 @@ document.addEventListener('DOMContentLoaded', function () {
 
   calendar.render();
 
+  /* ── Confirmación y guardado de drag/resize ───────────────────────── */
+  var _pendingMove    = null;
+  var _calDropConfirm = document.getElementById('calDropConfirm');
+
+  function _pedirConfirmacion(opts) {
+    _pendingMove = opts;
+
+    var p = opts.info.event.extendedProps;
+    document.getElementById('cdcPaciente').textContent = p.paciente || '—';
+    document.getElementById('cdcDoctor').textContent   = p.doctor   || '—';
+
+    var diasSemana = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    var d = new Date(opts.fecha + 'T' + opts.hora_inicio + ':00');
+    var etiquetaFecha = diasSemana[d.getDay()] + ' ' + opts.fecha.split('-').reverse().join('/');
+    document.getElementById('cdcFechaHora').textContent =
+      etiquetaFecha + '  ' + opts.hora_inicio + ' – ' + opts.hora_fin;
+
+    _calDropConfirm.style.display = '';
+  }
+
+  document.getElementById('cdcConfirmar').addEventListener('click', async function () {
+    if (!_pendingMove) return;
+    var opts = _pendingMove;
+    _pendingMove = null;
+    _calDropConfirm.style.display = 'none';
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i>Guardando…';
+    var self = this;
+
+    try {
+      var resp = await fetch('/agenda/citas/' + opts.info.event.id + '/mover/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({
+          fecha:       opts.fecha,
+          hora_inicio: opts.hora_inicio,
+          hora_fin:    opts.hora_fin,
+        }),
+      });
+      if (resp.ok) {
+        showDropToast(
+          opts.esDrop ? 'Cita reagendada correctamente' : 'Horario actualizado',
+          'ok'
+        );
+      } else {
+        var errData = await resp.json().catch(function(){ return {}; });
+        opts.info.revert();
+        showDropToast(errData.error || ('Error ' + resp.status + ' al guardar'), 'err');
+      }
+    } catch (_e) {
+      opts.info.revert();
+      showDropToast('Error de conexión — cambio revertido', 'err');
+    } finally {
+      self.disabled = false;
+      self.innerHTML = '<i class="fa-solid fa-check me-1"></i>Confirmar';
+    }
+  });
+
+  document.getElementById('cdcCancelar').addEventListener('click', function () {
+    if (_pendingMove) { _pendingMove.info.revert(); _pendingMove = null; }
+    _calDropConfirm.style.display = 'none';
+  });
+
   /* ── Cambiar estado de la cita desde el modal ────────────────────── */
   window.cambiarEstado = async function (citaId, nuevoEstado) {
-    const resp = await fetch(`/agenda/citas/${citaId}/estado/`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body:    JSON.stringify({ estado: nuevoEstado }),
-    });
-    if (resp.ok) {
-      bootstrap.Modal.getInstance(document.getElementById('modalCita')).hide();
-      calendar.refetchEvents();
+    try {
+      var resp = await fetch('/agenda/citas/' + citaId + '/estado/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ estado: nuevoEstado }),
+      });
+      if (resp.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalCita')).hide();
+        calendar.refetchEvents();
+        showDropToast('Estado actualizado', 'ok');
+      } else {
+        showDropToast('No se pudo cambiar el estado', 'err');
+      }
+    } catch (_) {
+      showDropToast('Error de conexión', 'err');
     }
   };
 

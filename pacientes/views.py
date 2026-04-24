@@ -145,9 +145,15 @@ def crear_paciente(request):
             HistoriaClinica.objects.create(paciente=paciente)
             messages.success(request, f'Paciente {paciente.nombre_completo} registrado correctamente.')
             return redirect('pacientes:detalle', pk=paciente.pk)
+        paciente_dup = getattr(form, '_paciente_dup', None)
     else:
         form = PacienteForm()
-    return render(request, 'pacientes/form.html', {'form': form, 'titulo': 'Nuevo Paciente'})
+        paciente_dup = None
+    return render(request, 'pacientes/form.html', {
+        'form': form,
+        'titulo': 'Nuevo Paciente',
+        'paciente_dup': paciente_dup,
+    })
 
 
 @login_required
@@ -159,9 +165,16 @@ def editar_paciente(request, pk):
             form.save()
             messages.success(request, 'Paciente actualizado.')
             return redirect('pacientes:detalle', pk=pk)
+        paciente_dup = getattr(form, '_paciente_dup', None)
     else:
         form = PacienteForm(instance=paciente)
-    return render(request, 'pacientes/form.html', {'form': form, 'titulo': 'Editar Paciente', 'paciente': paciente})
+        paciente_dup = None
+    return render(request, 'pacientes/form.html', {
+        'form': form,
+        'titulo': 'Editar Paciente',
+        'paciente': paciente,
+        'paciente_dup': paciente_dup,
+    })
 
 
 @login_required

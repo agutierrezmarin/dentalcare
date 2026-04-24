@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "inventario",
     "personal",
     "multimedia",
+    "espacios",
     "dentalcare",
 ]
 
@@ -55,6 +56,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "inventario.context_processors.alertas_inventario",
+                "agenda.context_processors.notificaciones_agenda",
             ],
         },
     },

@@ -270,11 +270,32 @@
        class="nav-link nav-link-reporte">
       <i class="fa-solid fa-chart-bar"></i><span>Reportes</span>
     </a>
+    {% endif %}
 
+    {% if request.user.perfil.rol == 'admin' or request.user.perfil.rol == 'recepcion' %}
     <div class="nav-section-title">Operaciones</div>
     <a href="{% url 'inventario:lista' %}" data-label="Inventario"
-       class="nav-link nav-link-inventario {% if 'inventario' in request.path %}active{% endif %}">
-      <i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span>
+       class="nav-link nav-link-inventario {% if 'inventario' in request.path %}active{% endif %}"
+       style="position:relative">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Inventario</span>
+      {% if inv_total_alertas %}
+      <span style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);
+                   min-width:18px;height:18px;border-radius:9px;
+                   background:{% if inv_vencidos %}#ef4444{% else %}#f59e0b{% endif %};
+                   color:#fff;font-size:.65rem;font-weight:700;
+                   display:flex;align-items:center;justify-content:center;padding:0 .3rem;
+                   line-height:1">
+        {{ inv_total_alertas }}
+      </span>
+      {% endif %}
+    </a>
+    {% endif %}
+
+    {% if request.user.perfil.rol == 'admin' %}
+    <a href="{% url 'espacios:lista' %}" data-label="Espacios"
+       class="nav-link nav-link-espacios {% if 'espacios' in request.path %}active{% endif %}">
+      <i class="fa-solid fa-hospital"></i><span>Espacios</span>
     </a>
     <a href="{% url 'personal:lista' %}" data-label="Personal"
        class="nav-link nav-link-personal {% if 'personal' in request.path %}active{% endif %}">
@@ -348,6 +369,129 @@
               data-bs-toggle="modal" data-bs-target="#modalSearchMobile">
         <i class="fa-solid fa-magnifying-glass"></i>
       </button>
+
+      <!-- Campana de notificaciones -->
+      <div class="position-relative" id="notifWrap" style="display:inline-block">
+        <button class="btn btn-outline-secondary btn-sm" id="notifBtn"
+                title="Notificaciones" aria-expanded="false"
+                style="position:relative">
+          <i class="fa-solid fa-bell"></i>
+          {% if notif_no_leidas %}
+          <span id="notifBadge" style="position:absolute;top:-5px;right:-5px;
+                min-width:17px;height:17px;border-radius:9px;
+                background:#ef4444;color:#fff;font-size:.6rem;font-weight:700;
+                display:flex;align-items:center;justify-content:center;padding:0 .25rem;
+                line-height:1;border:2px solid var(--bg-surface)">
+            {{ notif_no_leidas }}
+          </span>
+          {% else %}
+          <span id="notifBadge" style="display:none;position:absolute;top:-5px;right:-5px;
+                min-width:17px;height:17px;border-radius:9px;
+                background:#ef4444;color:#fff;font-size:.6rem;font-weight:700;
+                display:flex;align-items:center;justify-content:center;padding:0 .25rem;
+                line-height:1;border:2px solid var(--bg-surface)"></span>
+          {% endif %}
+        </button>
+
+        <!-- Dropdown panel -->
+        <div id="notifDropdown"
+             style="display:none;position:absolute;top:calc(100% + 8px);right:0;
+                    width:360px;max-width:95vw;z-index:3000;
+                    background:var(--bg-surface);border:1.5px solid var(--border);
+                    border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.18);
+                    overflow:hidden">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:.85rem 1.1rem;border-bottom:1.5px solid var(--border-light)">
+            <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.5rem">
+              <i class="fa-solid fa-bell" style="color:var(--accent)"></i>
+              Notificaciones
+              {% if notif_no_leidas %}
+              <span style="background:var(--accent);color:#fff;border-radius:20px;
+                           font-size:.68rem;padding:.1rem .45rem;font-weight:700">
+                {{ notif_no_leidas }} nueva{{ notif_no_leidas|pluralize }}
+              </span>
+              {% endif %}
+            </div>
+            {% if notif_no_leidas %}
+            <button id="btnTodasLeidas"
+                    style="font-size:.75rem;color:var(--accent);background:none;border:none;
+                           cursor:pointer;padding:.2rem .4rem;border-radius:6px;font-weight:600">
+              Marcar todas leídas
+            </button>
+            {% endif %}
+          </div>
+
+          <!-- Lista -->
+          <div style="max-height:340px;overflow-y:auto" id="notifList">
+            {% if notif_recientes %}
+            {% for n in notif_recientes %}
+            <div class="notif-item {% if not n.leida %}notif-unread{% endif %}"
+                 data-pk="{{ n.pk }}"
+                 style="display:flex;gap:.75rem;padding:.8rem 1.1rem;
+                        border-bottom:1px solid var(--border-light);cursor:pointer;
+                        transition:background .12s;
+                        {% if not n.leida %}background:rgba(45,184,122,.06);{% endif %}">
+              <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;
+                          display:flex;align-items:center;justify-content:center;font-size:.95rem;
+                          {% if n.tipo == 'nueva_cita' %}background:rgba(96,165,250,.15);color:#3b82f6
+                          {% elif n.tipo == 'confirmada' %}background:rgba(52,211,153,.15);color:#10b981
+                          {% elif n.tipo == 'cancelada' %}background:rgba(248,113,113,.15);color:#ef4444
+                          {% elif n.tipo == 'no_asistio' %}background:rgba(251,191,36,.15);color:#f59e0b
+                          {% elif n.tipo == 'reagendada' %}background:rgba(167,139,250,.15);color:#8b5cf6
+                          {% else %}background:rgba(156,163,175,.15);color:#6b7280{% endif %}">
+                {% if n.tipo == 'nueva_cita' %}<i class="fa-solid fa-calendar-plus"></i>
+                {% elif n.tipo == 'confirmada' %}<i class="fa-solid fa-circle-check"></i>
+                {% elif n.tipo == 'cancelada' %}<i class="fa-solid fa-calendar-xmark"></i>
+                {% elif n.tipo == 'no_asistio' %}<i class="fa-solid fa-user-slash"></i>
+                {% elif n.tipo == 'reagendada' %}<i class="fa-solid fa-calendar-days"></i>
+                {% else %}<i class="fa-solid fa-bell"></i>{% endif %}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:{% if not n.leida %}700{% else %}500{% endif %};
+                            font-size:.83rem;color:var(--text-1);
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  {{ n.titulo }}
+                </div>
+                {% if usuario_es_admin and n.cita.doctor %}
+                <div style="font-size:.7rem;color:var(--accent);font-weight:600;margin-top:.1rem">
+                  <i class="fa-solid fa-user-doctor fa-xs me-1"></i>{{ n.cita.doctor.get_full_name|default:n.cita.doctor.username }}
+                </div>
+                {% endif %}
+                <div style="font-size:.75rem;color:var(--text-2);margin-top:.1rem;
+                            line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;
+                            -webkit-box-orient:vertical;overflow:hidden">
+                  {{ n.mensaje }}
+                </div>
+                <div style="font-size:.7rem;color:var(--text-3);margin-top:.25rem">
+                  {{ n.creada_en|date:"d/m H:i" }}
+                </div>
+              </div>
+              {% if not n.leida %}
+              <div style="flex-shrink:0;width:8px;height:8px;border-radius:50%;
+                          background:var(--accent);margin-top:.35rem"></div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align:center;padding:2.5rem 1rem;color:var(--text-3)">
+              <i class="fa-solid fa-bell-slash fa-2x" style="opacity:.3;display:block;margin-bottom:.75rem"></i>
+              <div style="font-size:.85rem">Sin notificaciones</div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Footer -->
+          <div style="padding:.65rem 1.1rem;border-top:1.5px solid var(--border-light);text-align:center">
+            <a href="{% url 'agenda:notificaciones' %}"
+               style="font-size:.8rem;color:var(--accent);font-weight:600;text-decoration:none">
+              Ver todas las notificaciones
+            </a>
+          </div>
+        </div>
+      </div>
+
       <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary btn-sm" title="Nueva cita">
         <i class="fa-solid fa-plus"></i><span class="d-none d-md-inline ms-1">Nueva Cita</span>
       </a>
@@ -720,6 +864,81 @@
 })();
 </script>
 <script>
+/* ── Campana de notificaciones ── */
+(function () {
+  var btn      = document.getElementById('notifBtn');
+  var dropdown = document.getElementById('notifDropdown');
+  var badge    = document.getElementById('notifBadge');
+  if (!btn || !dropdown) return;
+
+  var TODAS_URL = "{% url 'agenda:todas_leidas' %}";
+  var LEER_BASE = "{% url 'agenda:marcar_leida' 0 %}".replace('0/leer/', '');
+  var csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+
+  // Abrir/cerrar
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = dropdown.style.display === 'block';
+    dropdown.style.display = open ? 'none' : 'block';
+    btn.setAttribute('aria-expanded', String(!open));
+  });
+
+  // Cerrar al click fuera
+  document.addEventListener('click', function (e) {
+    if (!dropdown.contains(e.target) && e.target !== btn) {
+      dropdown.style.display = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Marcar una notificación como leída al hacer click
+  dropdown.addEventListener('click', function (e) {
+    var item = e.target.closest('.notif-item');
+    if (!item) return;
+    var pk = item.dataset.pk;
+    if (!pk || !item.classList.contains('notif-unread')) return;
+    fetch(LEER_BASE + pk + '/leer/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken },
+    }).then(function () {
+      item.classList.remove('notif-unread');
+      item.style.background = '';
+      var dot = item.querySelector('[style*="border-radius:50%"]');
+      if (dot) dot.remove();
+      _decrementBadge();
+    });
+  });
+
+  // Marcar todas leídas
+  var btnTodas = document.getElementById('btnTodasLeidas');
+  if (btnTodas) {
+    btnTodas.addEventListener('click', function (e) {
+      e.stopPropagation();
+      fetch(TODAS_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+      }).then(function (r) { return r.json(); }).then(function () {
+        document.querySelectorAll('.notif-item.notif-unread').forEach(function (el) {
+          el.classList.remove('notif-unread');
+          el.style.background = '';
+          var dot = el.querySelector('[style*="border-radius:50%"]');
+          if (dot) dot.remove();
+          var title = el.querySelector('[style*="font-weight"]');
+          if (title) title.style.fontWeight = '500';
+        });
+        badge.style.display = 'none';
+        btnTodas.remove();
+      });
+    });
+  }
+
+  function _decrementBadge() {
+    var n = parseInt(badge.textContent || '0', 10) - 1;
+    if (n <= 0) { badge.style.display = 'none'; }
+    else { badge.textContent = n; }
+  }
+})();
+
 /* ── Breadcrumb: muestra solo el último segmento en móvil ── */
 (function () {
   function updateBreadcrumb() {

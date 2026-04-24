@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import date, timedelta
 import json
-from .models import Cita, Sillon, DisponibilidadDoctor, BloqueoAgenda
+from .models import Cita, Sillon, DisponibilidadDoctor, BloqueoAgenda, NotificacionAgenda
 from .forms import CitaForm, SillonForm, CobrarCitaForm
 
 
@@ -128,11 +128,14 @@ def crear_cita(request):
             c_ok = cita_form.is_valid()
 
             if p_ok and c_ok:
-                paciente      = paciente_form.save()
+                paciente, creado = paciente_form.get_or_create_paciente()
                 cita          = cita_form.save(commit=False)
                 cita.paciente = paciente
                 cita.save()
-                messages.success(request, f'Paciente {paciente} y cita registrados correctamente.')
+                if creado:
+                    messages.success(request, f'Paciente {paciente} y cita registrados correctamente.')
+                else:
+                    messages.info(request, f'Paciente ya registrado. Cita agendada para {paciente}.')
                 return redirect('agenda:calendario')
         else:
             paciente_form = PacienteRapidoForm()
@@ -230,13 +233,49 @@ def cambiar_estado_cita(request, pk):
 @login_required
 def mover_cita(request, pk):
     """Drag & drop desde FullCalendar."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
     cita = get_object_or_404(Cita, pk=pk)
-    if request.method == 'POST':
+
+    # Control de acceso: admin o el doctor dueño
+    es_admin = hasattr(request.user, 'perfil') and request.user.perfil.rol == 'admin'
+    if not es_admin and cita.doctor is not None and cita.doctor != request.user:
+        return JsonResponse({'ok': False, 'error': 'Sin permiso para mover esta cita'}, status=403)
+
+    if cita.estado == 'completada':
+        return JsonResponse({'ok': False, 'error': 'No se puede mover una cita completada'}, status=400)
+
+    try:
         data = json.loads(request.body)
-        cita.fecha = data['fecha']
-        cita.hora_inicio = data['hora_inicio']
-        cita.hora_fin = data['hora_fin']
+        nueva_fecha      = data['fecha']
+        nueva_hora_ini   = data['hora_inicio']
+        nueva_hora_fin   = data['hora_fin']
+    except (json.JSONDecodeError, KeyError):
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos'}, status=400)
+
+    from datetime import datetime as _dt
+    try:
+        cita.fecha       = _dt.strptime(nueva_fecha,    '%Y-%m-%d').date()
+        cita.hora_inicio = _dt.strptime(nueva_hora_ini, '%H:%M').time()
+        cita.hora_fin    = _dt.strptime(nueva_hora_fin, '%H:%M').time()
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Formato de fecha u hora inválido'}, status=400)
+
+    if cita.hora_inicio >= cita.hora_fin:
+        return JsonResponse({'ok': False, 'error': 'La hora de fin debe ser posterior al inicio'}, status=400)
+
+    try:
         cita.save()
+    except Exception as exc:
+        return JsonResponse({'ok': False, 'error': f'Error al guardar: {exc}'}, status=500)
+
+    try:
+        from .signals import notificar_reagendada
+        notificar_reagendada(cita)
+    except Exception:
+        pass
+
     return JsonResponse({'ok': True})
 
 
@@ -244,15 +283,50 @@ def mover_cita(request, pk):
 def citas_hoy(request):
     hoy = date.today()
     citas = Cita.objects.filter(fecha=hoy).select_related(
-        'paciente', 'doctor', 'servicio', 'sillon'
+        'paciente', 'doctor', 'doctor__perfil', 'servicio', 'sillon'
     ).order_by('hora_inicio')
+
+    # Precarga de espacios asignados a los doctores de las citas de hoy
+    espacios_por_doctor = {}
+    try:
+        from espacios.models import EspacioClinico
+        doctor_ids = [c.doctor_id for c in citas if c.doctor_id]
+        for esp in EspacioClinico.objects.filter(
+            doctores__in=doctor_ids, activo=True
+        ).prefetch_related('doctores'):
+            for doc in esp.doctores.all():
+                if doc.id in doctor_ids:
+                    espacios_por_doctor.setdefault(doc.id, []).append(esp)
+    except Exception:
+        pass
+
+    # Anotar cada cita con el primer espacio de su doctor
+    for c in citas:
+        espacios = espacios_por_doctor.get(c.doctor_id, [])
+        c.espacio_asignado = espacios[0] if espacios else None
+
     return render(request, 'agenda/hoy.html', {'citas': citas, 'hoy': hoy})
 
 
 @login_required
 def detalle_cita(request, pk):
-    cita = get_object_or_404(Cita, pk=pk)
-    return render(request, 'agenda/detalle_cita.html', {'cita': cita})
+    cita = get_object_or_404(Cita.objects.select_related(
+        'paciente', 'doctor', 'doctor__perfil', 'servicio', 'sillon'
+    ), pk=pk)
+    espacios = []
+    if cita.doctor_id:
+        try:
+            from espacios.models import EspacioClinico
+            espacios = list(EspacioClinico.objects.filter(
+                doctores=cita.doctor_id, activo=True
+            ))
+        except Exception:
+            pass
+    return render(request, 'agenda/detalle_cita.html', {
+        'cita': cita,
+        'espacio': espacios[0] if espacios else None,
+        'espacios': espacios,
+    })
 
 
 @login_required
@@ -365,3 +439,86 @@ def cobrar_cita(request, pk):
         'historial': historial,
         'titulo': f'Cobrar — {paciente}',
     })
+
+
+# ── Notificaciones ────────────────────────────────────────────────────
+
+@login_required
+def notificaciones(request):
+    todas = NotificacionAgenda.objects.filter(
+        destinatario=request.user
+    ).select_related('cita', 'cita__paciente', 'cita__doctor')
+    return render(request, 'agenda/notificaciones.html', {'notificaciones': todas})
+
+
+@login_required
+def marcar_leida(request, pk):
+    if request.method == 'POST':
+        NotificacionAgenda.objects.filter(pk=pk, destinatario=request.user).update(leida=True)
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False}, status=405)
+
+
+@login_required
+def marcar_todas_leidas(request):
+    if request.method == 'POST':
+        count = NotificacionAgenda.objects.filter(
+            destinatario=request.user, leida=False
+        ).update(leida=True)
+        return JsonResponse({'ok': True, 'marcadas': count})
+    return JsonResponse({'ok': False}, status=405)
+
+
+@login_required
+def espacio_doctor(request):
+    """Devuelve los espacios clínicos asignados a un doctor (para el formulario de cita)."""
+    doctor_id = request.GET.get('doctor_id')
+    if not doctor_id:
+        return JsonResponse({'espacios': []})
+    try:
+        from espacios.models import EspacioClinico
+        qs = EspacioClinico.objects.filter(doctores=doctor_id, activo=True)
+        data = [
+            {
+                'pk':             e.pk,
+                'codigo':         e.codigo,
+                'nombre':         e.nombre,
+                'tipo':           e.get_tipo_display(),
+                'ubicacion':      e.ubicacion,
+                'color':          e.color,
+                'estado':         e.estado,
+                'estado_display': e.get_estado_display(),
+            }
+            for e in qs
+        ]
+        return JsonResponse({'espacios': data})
+    except Exception:
+        pass
+    return JsonResponse({'espacios': []})
+
+
+@login_required
+def notificaciones_json(request):
+    """Endpoint para el dropdown de la campana."""
+    recientes = NotificacionAgenda.objects.filter(
+        destinatario=request.user
+    ).select_related('cita', 'cita__paciente')[:10]
+    no_leidas = NotificacionAgenda.objects.filter(
+        destinatario=request.user, leida=False
+    ).count()
+    data = {
+        'no_leidas': no_leidas,
+        'items': [
+            {
+                'pk':       n.pk,
+                'tipo':     n.tipo,
+                'titulo':   n.titulo,
+                'mensaje':  n.mensaje,
+                'leida':    n.leida,
+                'fecha':    n.creada_en.strftime('%d/%m %H:%M'),
+                'cita_pk':  n.cita.pk if n.cita else None,
+            }
+            for n in recientes
+        ],
+    }
+    return JsonResponse(data)
